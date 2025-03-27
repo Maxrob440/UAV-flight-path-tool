@@ -177,7 +177,7 @@ class Graph2D:
                 shortest_length = length
                 shortest_path = path
         self.transect_path = shortest_path
-        print(shortest_path,shortest_length)
+        # print(shortest_path,shortest_length)
         if plot:
             self.plot_fastest_transcets(shortest_path)
 
@@ -205,7 +205,7 @@ class Graph2D:
         for ind,points in enumerate(self.separated_points):
             x_values = [point[0] for point in points]
             y_values = [point[1] for point in points]
-            print(len(x_values))
+            # print(len(x_values))
 
             plt.plot(x_values, y_values, marker='', linestyle='-',label=f'Route: {ind}',alpha=0.5)
 
