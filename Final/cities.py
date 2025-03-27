@@ -41,7 +41,7 @@ class Shp_Opener:
                     x, y = poly.exterior.xy
                     area_points.extend(zip(x, y))
         self.get_buffered_area(36)
-        print(area_points)
+        # print(area_points)
         return area_points
     
     def get_buffered_area(self,buffer):

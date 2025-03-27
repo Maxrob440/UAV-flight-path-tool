@@ -34,7 +34,7 @@ class BruteForce:
             route_distance = self.find_distance(route)
             if route_distance < shortest_route[0]:
                 shortest_route = [route_distance, route]
-        pprint(shortest_route)
+        # pprint(shortest_route)
 
 
 
