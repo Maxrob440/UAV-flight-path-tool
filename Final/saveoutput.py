@@ -19,11 +19,13 @@ class Converter:
             print(src.crs)
     
     def convert_mercader_to_lat_long(self,coords):
+        print(len(coords))
+
         inital_z = coords[0][2]-20
-        for x,y,z in coords:
+        for x,y,z,plot in coords:
             to_latlong = Transformer.from_crs("EPSG:2193", "EPSG:4326", always_xy=True)
             lon, lat = to_latlong.transform(x, y)
-            self.lat_long_coords.append((lat, lon,z-inital_z))
+            self.lat_long_coords.append((lat, lon,z-inital_z,plot))
 
 
     def convert_into_correct_form(self):
@@ -41,8 +43,8 @@ class Converter:
         for ind,point in enumerate(self.lat_long_coords):
             if ind == len(self.lat_long_coords)-1:
                 break
-            lat1,long1,z = point
-            lat2,long2,z = self.lat_long_coords[ind+1]
+            lat1,long1,z,plot = point
+            lat2,long2,z,plot = self.lat_long_coords[ind+1]
             bearings.append(calculate_bearing(lat1,long1,lat2,long2))
         self.bearings = bearings
         self.bearings.append(0) #Add 0 to the end of the list to make it the same length as lat_long_coords
@@ -51,8 +53,18 @@ class Converter:
     def create_csv(self):
         import pandas as pd
         df = pd.DataFrame(columns=["latitude","longitude","altitude(m)","heading","curvesize(m)","rotationdir","gimbalmode","gimbalpitchangle","actiontype1","actionparam1","actiontype2","actionparam2","actiontype3","actionparam3","actiontype4","actionparam4","actiontype5","actionparam5","actiontype6","actionparam6","actiontype7","actionparam7","actiontype8","actionparam8","actiontype9","actionparam9","actiontype10","actionparam10","actiontype11","actionparam11","actiontype12","actionparam12","actiontype13","actionparam13","actiontype14","actionparam14","actiontype15","actionparam15","altitudemode","speed(m/s)","poi_latitude","poi_longitude","poi_altitude(m)","poi_altitudemode","photo_timeinterval","photo_distinterval"])
+        print(len(self.lat_long_coords))
         for ind,point in enumerate(self.lat_long_coords):
-            df.loc[ind]=([point[0],point[1],point[2],self.bearings[ind],0.2,0,0,0,5,-90,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,0,0,0,0,0,0,-1,-1])
+            if point[3] == True:
+                speed = 0.8
+                photo_timeinterval = 2
+                photo_distinterval = 0
+            else:
+                speed = 0
+                photo_timeinterval = -1
+                photo_distinterval = -1
+
+            df.loc[ind]=([point[0],point[1],point[2],self.bearings[ind],0.2,0,0,0,5,-90,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,0,speed,0,0,0,0,photo_timeinterval,photo_distinterval])
         df.to_csv('Drone_path.csv', index=False)
     
 

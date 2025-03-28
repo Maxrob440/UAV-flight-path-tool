@@ -130,9 +130,25 @@ class Main():
         connections = [[i,i+1] for i in range(len(fastest_route)-1)]
 
         interpolated_route,_ = self.pointcloud.create_interpolated_line(fastest_route,connections,interpolate=20)
+        interpolated_route_with_plot =[]
+        seen_interpolated = []
+        # //TODO fix this
+        for point in interpolated_route: #UGLY CODE fixing a bug elsewhere by removing duplicates
+            if point not in seen_interpolated:
+                seen_interpolated.append(point)
+        interpolated_route = seen_interpolated        
+        for point in interpolated_route:
+            if point in fastest_route:
+                x,y,z = point
+                interpolated_route_with_plot.append([x,y,z,True])
+            else:
+                x,y,z = point
+                interpolated_route_with_plot.append([x,y,z,False])
+        # interpolated_route_with_plot = [x,y,z,True for x,y,z in interpolated_route if [x,y,z] in fastest_route]
+
         print('Saving output')
         saver = saveoutput.Converter(self.dem_location)
-        saver.convert_mercader_to_lat_long(interpolated_route)
+        saver.convert_mercader_to_lat_long(interpolated_route_with_plot)
         saver.convert_into_correct_form()
         saver.create_csv()
 

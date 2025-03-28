@@ -109,12 +109,11 @@ class PointCloud:
             for j in range(length):
                 interpolated_points.append([x[j],y[j],z[j]])
         connections = [[i,i+1] for i in range(len(interpolated_points)-1)]
-        connections.append([len(interpolated_points)-1,0])
+        # connections.append([len(interpolated_points)-1,0])
         return interpolated_points,connections
         
 
     def create_line_helper(self,points,connections,colour):
-        
         # print(points)
         line = o3d.geometry.LineSet()
         points = np.array(points)
