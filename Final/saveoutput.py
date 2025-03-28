@@ -53,7 +53,7 @@ class Converter:
         df = pd.DataFrame(columns=["latitude","longitude","altitude(m)","heading","curvesize(m)","rotationdir","gimbalmode","gimbalpitchangle","actiontype1","actionparam1","actiontype2","actionparam2","actiontype3","actionparam3","actiontype4","actionparam4","actiontype5","actionparam5","actiontype6","actionparam6","actiontype7","actionparam7","actiontype8","actionparam8","actiontype9","actionparam9","actiontype10","actionparam10","actiontype11","actionparam11","actiontype12","actionparam12","actiontype13","actionparam13","actiontype14","actionparam14","actiontype15","actionparam15","altitudemode","speed(m/s)","poi_latitude","poi_longitude","poi_altitude(m)","poi_altitudemode","photo_timeinterval","photo_distinterval"])
         for ind,point in enumerate(self.lat_long_coords):
             df.loc[ind]=([point[0],point[1],point[2],self.bearings[ind],0.2,0,0,0,5,-90,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,0,0,0,0,0,0,-1,-1])
-        df.to_csv('lat_long_coords.csv', index=False)
+        df.to_csv('Drone_path.csv', index=False)
     
 
 
