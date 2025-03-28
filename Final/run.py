@@ -113,8 +113,10 @@ class Main():
             self.threed_input(fastest_route)
         if self.twod:
             graph_to_show.show()
+        if not threed and not twod:
+            self.threed_input(fastest_route,show=False)
 
-    def threed_input(self,fastest_route):
+    def threed_input(self,fastest_route,show=True):
         '''Visualizes the 3D point cloud'''
         print('Loading point cloud')
         print('Creating 3D point cloud')
@@ -123,7 +125,8 @@ class Main():
         self.pointcloud.form_kdtree()
         self.pointcloud.display_path(fastest_route)
         self.save_output(fastest_route)
-        self.pointcloud.show()
+        if show:
+            self.pointcloud.show()
     
     def save_output(self,fastest_route):
         fastest_route = [[x,y,z] for x,y in fastest_route for z in [self.pointcloud.find_altitude([x,y],30)]]
@@ -162,4 +165,5 @@ if __name__ == "__main__":
 
     main.get_all_inputs()
     main.load_shp_file()
-    main.visualize()
+    main.visualize(twod=True,threed=False)
+    # print(main.dem_location,main.no_points,main.shp_location)
