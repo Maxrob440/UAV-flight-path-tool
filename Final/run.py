@@ -3,6 +3,7 @@ import two_d_graphing
 import cities
 import numpy as np
 import pointcloud
+import saveoutput
 
 class Main():
     def __init__(self):
@@ -112,14 +113,29 @@ class Main():
             self.threed_input(fastest_route)
         if self.twod:
             graph_to_show.show()
+
     def threed_input(self,fastest_route):
         '''Visualizes the 3D point cloud'''
         print('Loading point cloud')
+        print('Creating 3D point cloud')
         self.pointcloud = pointcloud.PointCloud(self.dem_location)
         self.pointcloud.read_tif()
         self.pointcloud.form_kdtree()
         self.pointcloud.display_path(fastest_route)
+        self.save_output(fastest_route)
         self.pointcloud.show()
+    
+    def save_output(self,fastest_route):
+        fastest_route = [[x,y,z] for x,y in fastest_route for z in [self.pointcloud.find_altitude([x,y],30)]]
+        connections = [[i,i+1] for i in range(len(fastest_route)-1)]
+
+        interpolated_route,_ = self.pointcloud.create_interpolated_line(fastest_route,connections,interpolate=20)
+        print('Saving output')
+        saver = saveoutput.Converter(self.dem_location)
+        saver.convert_mercader_to_lat_long(interpolated_route)
+        saver.convert_into_correct_form()
+        saver.create_csv()
+
 
 
 
