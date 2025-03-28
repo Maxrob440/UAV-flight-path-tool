@@ -92,14 +92,14 @@ class PointCloud:
     def create_interpolated_line(self,
                                  points,
                                  connections,
-                                 colour,
-                                 interpolate=10):
+                                 colour=[1,0,0],
+                                 interpolate=8):
         ''' Creates interpolation between the points on the line, to ensure distance away from floor is more constant'''
         interpolated_points = []
         for i,_ in enumerate(connections):
             start = points[connections[i][0]]
             end = points[connections[i][1]]
-            length = int(int(np.linalg.norm(np.array(start)-np.array(end)))/8)
+            length = int(int(np.linalg.norm(np.array(start)-np.array(end)))/interpolate)
             x = np.linspace(start[0],end[0],length)
             y = np.linspace(start[1],end[1],length)
             z=[]
@@ -170,7 +170,7 @@ class PointCloud:
         connections = [[i,i+1] for i in range(len(best_path_coors)-1)]
         points = [[x,y,z] for x,y in best_path_coors for z in [self.find_altitude([x,y],30)]]
         connections.append([len(best_path_coors)-1,0])
-        self.create_line(points,connections,draw_point=True,interpolate=50)
+        self.create_line(points,connections,draw_point=True,interpolate=8)
 
     def show(self):
         '''Plots the point cloud'''
