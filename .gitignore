@@ -1,0 +1,14 @@
+plotting_dem/fargate_aba0d088-e07e-470a-8f13-ecb6d522b86a.las
+fargate_5160bb5c-6262-4c2e-b103-fef79237c5c0.las
+plotting_dem/fargate_8891a542-6c49-4a27-9abb-276f7b8dbf9e.las
+/data
+venv/
+Final/__pycache__
+flight path images/
+OUTPUT/
+tests/__pycache__
+Private/
+.coverage
+.vscode/
+.pytest_cache/
+__pycache__/
