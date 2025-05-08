@@ -1,6 +1,6 @@
 # UAV PROJECT 2.0.1
 
-Work completed in collaboration with Interpine NZ\\
+Work completed in collaboration with Interpine NZ<br/>
 This is an initial draft
 
 ## Requirements
