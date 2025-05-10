@@ -7,6 +7,12 @@ config.load_config()
 config.config['distances']['height_above_ground_m'] = 0
 config.save_config()
 
+def test_load_tif():
+    pointcloud_obj = PointCloud('tests/test_files/tif')
+    pointcloud_obj.read_tif()
+    # pointcloud_obj.show_point_cloud()
+    assert len(pointcloud_obj.xyz) > 0
+
 
 def test_find_altitude_no_add():
     pointcloud_obj = PointCloud('tif path')

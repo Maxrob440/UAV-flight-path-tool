@@ -39,6 +39,27 @@ def test_XY_standing_locations():
     driver.load_standing_locations()
     assert driver.standing_locations == [(0,0,0), (1,1,1)], "Driver should load XY standing locations correctly"
 
+def test_loading_standing_locations_with_no_valid_txt_file():
+    driver = Driver(folder_path='tests/test_files/no_available_standing_locations')
+    driver.load_standing_locations()
+    assert driver.standing_locations == []
+
+def test_loading_standing_locations_with_non_valid_txt_file():
+    driver = Driver(folder_path='tests/test_files/invalid_coords_XY')
+    driver.load_standing_locations()
+    assert driver.standing_locations == []
+    
+    driver = Driver(folder_path='tests/test_files/invalid_coords_XYZ')
+    driver.load_standing_locations()
+    assert driver.standing_locations == []
+    
+
+def test_load_standing_locations_from_params():
+    driver = Driver()
+    driver.load_standing_locations([(0,0,0), (1,1,1)])
+    assert driver.standing_locations == [(0,0,0), (1,1,1)]
+
+
 def test_generate_points_from_parameters():
     driver = Driver()
     driver.generate_points(points=[(0,0,0), (1,1,1)])
@@ -46,6 +67,12 @@ def test_generate_points_from_parameters():
 
     driver.generate_points(starting_point=(-1,-1,-1),points=[(0,0,0), (1,1,1)])
     assert driver.cities == [(-1,-1,-1),(0,0,0), (1,1,1)], "Driver should generate points correctly"
+
+
+def test_load_shape_file_from_tif():
+    driver = Driver('tests/test_files/test_shp')
+    driver.load_shp_file()
+
 
 def test_generate_points_inside_square():
     config.config['distances']['distance_to_nearest_point_m'] = 0
@@ -59,6 +86,18 @@ def test_generate_points_inside_square():
     for point in driver.cities:
         assert point[0] >= 0 and point[0] <= 1
         assert point[1] >= 0 and point[1] <= 1
+
+def test_generate_points_inside_square_forcing_distance_below_minimum():
+    config.config['distances']['distance_to_nearest_point_m'] = 100
+    config.config['distances']['number_of_points_per_area'] =8
+    config.save_config()
+
+    driver = Driver()
+    driver.buffer_coords=[[(0,0),(1,1),(1,0),(0,1)]]
+    driver.generate_points()
+    assert len(driver.cities)==1
+
+
 
 def test_generate_points_inside_square_with_DVLOS():
     # config.config['distances']['number_of_points_per_area'] =8
@@ -117,4 +156,36 @@ def test_generate_transects():
     assert (2,2,0) in driver.transects
     assert len(driver.transects[(2,2,0)]) == 3 #All other points do
     assert len(driver.transects[(2,2,0)][0]) == 3
-    
+    assert driver.transects[(2,2,0)][0]==(2,2,0)
+    for transect in driver.transects[(2,2,0)]:
+        assert transect[0]<50 and transect[0]>0
+        assert transect[1]<50 and transect[1]>0
+        
+def test_solve_transect_route():
+    driver=Driver()
+    driver.transects={(1,1,0):[(1,1)],
+                      (2,2,0):[(2,2),(3,3),(4,4)]}
+    driver.best_path_coords=[(1,1,0),(2,2,0)]
+    driver.solve_transect_route()
+    assert len(driver.transect_path)==4
+    assert driver.transect_path[0][0]==(1,1)
+    assert driver.transect_path[0][1] is False
+    assert driver.transect_path[-1][0]==(2,2) or driver.transect_path[-3][0]==(2,2)
+    assert driver.transect_path[-2][0]==(3,3)
+    for point in driver.transect_path[1:]:
+        assert point[1] is True
+
+def test_solve_transect_route_with_fillers():
+    driver=Driver()
+    driver.transects={(1,1,0):[(1,1)],
+                      (2,2,0):[(2,2),(3,3),(4,4)],
+                      (5,5,0):[(5,5)]}
+    driver.best_path_coords=[(1,1,0),(2,2,0),(5,5,0)]
+    driver.solve_transect_route()
+    assert len(driver.transect_path)==5
+    assert driver.transect_path[-1]==[(5,5),False]
+
+def test_route_length():
+    driver = Driver()
+    assert round(driver.route_length([[(0,0),False], [(1,1),True], [(2,2),False]]),1)==2.8
+    assert driver.route_length([[(-1,0),False],[(0,0),True]])==1

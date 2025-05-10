@@ -112,6 +112,7 @@ class Driver:
         # file=os.path.join(self.folder_path, 'standing_locations.txt')
         if not os.path.exists(file):
             raise ValueError("Standing locations file not found.")
+        
         with open(file, 'r') as f:
             lines = f.readlines()
 
@@ -162,15 +163,25 @@ class Driver:
         self.buffer_coords = [x[0] for x in buffer_coords_areas[:number_areas]] 
         print('Buffers cleaned.')
         return buffer_coords_areas[:number_areas]
+    
+
     def inside_shape(self,
                      x:float,
                          y:float,
                          buffer:Coordinates)->bool:
             '''
             Check if a point (x, y) is inside a polygon defined by the buffer coordinates.'''
+            
+            if not isinstance(x, float) or not isinstance(y, float):
+                raise ValueError("x and y must be floats.")
+            if not isinstance(buffer, list) or not all(len(coord) == 2 for coord in buffer):
+                raise ValueError("Buffer must be a list of tuples with 2 elements each.")
+            
+
             inside = False
 
             n = len(buffer)
+
             if n < 3:  # A valid polygon must have at least 3 points
                 return False#Check correct
             for i in range(n):
@@ -190,6 +201,11 @@ class Driver:
         Generates random points inside the buffer area.\n
 
         '''
+        if points:
+            if not isinstance(points, list) or not all(isinstance(point, tuple) and len(point) == 3 for point in points):
+                raise ValueError("Points must be a list of tuples with 3 elements each.")
+            
+
         buffer_id = self.current_buffer
         uav_height = float(self.config.config['distances']['height_above_ground_m'])
 
