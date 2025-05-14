@@ -16,6 +16,7 @@ class Gui:
     This class creates a GUI for the program. It allows the user to select a folder, load a shapefile, generate a buffer, and solve the TSP.'''
     def __init__(self):
         self.config = Config()
+        self.config.set_default()
         self.folder_location = self.config.config['current_map']['folder_location']
         self.driver = None
         self.root = Tk()
