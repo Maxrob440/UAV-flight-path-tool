@@ -51,7 +51,7 @@ class Config:
                     "attempts_to_find_point_in_area": "1000",
                     "height_above_ground_m": "25",
                     "transect_length_m": "25",
-                    "interpolation_distance_m": "1",
+                    "interpolation_distance_m": "10",
                     "number_of_points_per_area": "8",
                     "human_height_above_ground_m":"4"
             },
@@ -66,7 +66,6 @@ class Config:
                 "DVLOS_m": "1",
                 "brute_force_cutoff": "8",
                 "maximum_recusive_depth": "3",
-                "interpolation_distance_m": "10"
                 },
             "io":{
                 "output_folder": "OUTPUT",
