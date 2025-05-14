@@ -88,7 +88,8 @@ class Gui:
                          path=False,
                          transects=False,
                          transect_path=False,
-                         transect_all_points=False):
+                         transect_all_points=False,
+                         test=False):
         '''
         Generates a picture depending on the parameters given. It uses matplotlib to plot the points and lines.
         Saves the picture in the Output folder
@@ -147,8 +148,12 @@ class Gui:
         plt.legend(fontsize='12',
                 loc='best')
         plt.savefig(os.path.join(output_path, graph_name))
-        plt.close()
+        if not test:
+            plt.close()
+        
         self.update_image()
+        if test:
+            return plt.gcf()
 
     def save_output(self):
         '''
