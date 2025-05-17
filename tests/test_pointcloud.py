@@ -13,14 +13,25 @@ def test_load_tif():
     # pointcloud_obj.show_point_cloud()
     assert len(pointcloud_obj.xyz) > 0
 
+def test_attempt_load_tif_with_multiple():
+    pointcloud_obj = PointCloud('tests/test_files/multiple_tifs')
+    with pytest.raises(ValueError):
+        pointcloud_obj.read_tif()
+
 
 def test_find_altitude_no_add():
     pointcloud_obj = PointCloud('tif path')
-
     print(pointcloud_obj.xyz)
     pointcloud_obj.read_tif([[0,0,0],[1,1,1],[2,2,2],[3,3,3],[4,4,4]])
     assert pointcloud_obj.find_altitude((1,1),0) == 1
 
+def test_altitude_incorrect_form():
+    pointcloud_obj = PointCloud('tif path')
+    pointcloud_obj.read_tif([[0,0,0],[1,1,1],[2,2,2],[3,3,3],[4,4,4]])
+    with pytest.raises(TypeError):
+        pointcloud_obj.find_altitude([1,1],0)
+    with pytest.raises(TypeError):
+        pointcloud_obj.find_altitude((1,1),'0')
 
 def test_find_altitude_add_positive():
     pointcloud_obj = PointCloud('tif path')
