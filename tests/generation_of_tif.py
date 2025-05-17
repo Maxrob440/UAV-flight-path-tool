@@ -2,7 +2,8 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
-data = np.random.randint(0, 255, (100, 100)).astype('uint8')
+# data = np.random.randint(0, 255, (100, 100)).astype('uint8') #For rectangle
+data = np.full((100, 100), 255).astype('uint8') #For square
 
 transform = from_origin(0, 100, 1, 1)
 
