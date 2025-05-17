@@ -87,7 +87,7 @@ def test_load_load_shape_file_not_found():
 
 
 @patch('open3d.visualization.draw_geometries')
-def test_integration(mock_draw_geometries):
+def test_integration_correct_orders(mock_draw_geometries):
     gui=Gui()
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
@@ -105,4 +105,27 @@ def test_integration(mock_draw_geometries):
     assert isinstance(gui.driver.transect_path[0][1],bool)
     assert len(gui.driver.transect_path[0][0]) == 2
 
+
+@patch('open3d.visualization.draw_geometries')
+def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
+    gui = Gui()
+    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
+    gui.config.save_config()
+    gui.load_shapefile()
+    gui.generate_points()
+    gui.solve_tsp()
+    gui.view_threed()
+
+def test_save_output_of_just_TSP_path():
+    gui = Gui()
+    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
+    gui.config.save_config()
+    gui.load_shapefile()
+    gui.generate_points()
+    gui.solve_tsp()
+    gui.save_output()
+
+    # assert os.path.exists(os.path.join(gui.config.config['io']['output_folder'], 'TSP_path.txt'))
     

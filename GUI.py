@@ -171,6 +171,8 @@ class Gui:
             threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.transect_path)
             # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.transect_path]
         else:
+            if not isinstance(self.driver.best_path_coords[0][1],bool):
+                self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords]
             threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.best_path_coords)
 
             # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.best_path_coords]
@@ -332,7 +334,9 @@ class Gui:
                 human_location=standing_location,
                 dvlos = True,
                 best_path_coords=self.driver.transect_path) 
-            return   
+            return
+        if not isinstance(self.driver.best_path_coords[0][1],bool):
+            self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
         self.driver.pointcloudholder.show_point_cloud(
             cities=self.driver.cities,
             human_location=standing_location,
