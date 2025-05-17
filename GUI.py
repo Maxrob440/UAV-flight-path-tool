@@ -11,6 +11,7 @@ from saveoutput import Converter
 
 
 
+
 class Gui:
     '''
     This class creates a GUI for the program. It allows the user to select a folder, load a shapefile, generate a buffer, and solve the TSP.'''
@@ -40,11 +41,13 @@ class Gui:
 
         self.config.save_config()
 
-    def load_shapefile(self):
+    def load_shapefile(self,folder_location=None):
         '''
         Function to load a shapefile. It creates a Driver object and loads the shapefile. It also generates a buffer and a picture of the buffer.
         Expensive to run
         '''
+        if folder_location is not None:
+            self.folder_location = folder_location
         number_of_points = int(self.config.config['distances']['number_of_points_per_area'])
         if self.folder_location == '':
             if self.config.config['current_map']['folder_location'] == '':
