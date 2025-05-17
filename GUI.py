@@ -63,7 +63,7 @@ class Gui:
         self.driver.buffer_coords=[]
         try:
             self.driver.load_shp_file()
-        except FileNotFoundError:
+        except (FileNotFoundError,ValueError):
             self.add_to_terminal("Shapefile not found, please try again")
             return
         self.driver.clean_buffers(len(self.driver.buffer_coords))
