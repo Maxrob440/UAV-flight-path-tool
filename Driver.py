@@ -22,7 +22,7 @@ class Driver:
     It also uses the Config class to handle configuration settings.\n
     '''
     def __init__(self, 
-                 folder_path:str='Data/MGAT_01201/Base_Data',
+                 folder_path:str='',
                  number_points:int=8,
                  number_areas:int=1,)->None:
         '''
@@ -55,7 +55,7 @@ class Driver:
         '''
         possible_files = [file for file in os.listdir(self.folder_path) if file.endswith('.shp')]
         if len(possible_files) != 1:
-            raise ValueError("There should be exactly one .shp file in the folder.")
+            raise ValueError(f"There should be exactly one .shp file in the folder, found: {len(possible_files)}")
         shp_file = os.path.join(self.folder_path, possible_files[0])
         buffer_distance = float(self.config.config['distances']['buffer_m'])
 

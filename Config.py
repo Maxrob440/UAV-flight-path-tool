@@ -57,7 +57,7 @@ class Config:
             },
 
             "current_map":{
-                "folder_location": "Data/MGAT_01201/Base_Data",
+                "folder_location": "",
                 "human_location":""
             },
             "speed_related":{
