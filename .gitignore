@@ -13,3 +13,4 @@ Private/
 .pytest_cache/
 __pycache__/
 htmlcov/
+config.json
