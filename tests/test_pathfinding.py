@@ -229,6 +229,7 @@ def test_all_points_not_visible_on_interpolated_line():
     cities = [(0,0),(10,0)]
     human_location = (5,5,0)
     empty_obstacles = [[]]
+    config.config['distances']['interpolation_distance_m'] = 1
     config.config['distances']['height_above_ground_m'] = 0
     config.save_config()
     pointcloud = PointCloud('Fake_path')

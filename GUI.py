@@ -11,11 +11,13 @@ from saveoutput import Converter
 
 
 
+
 class Gui:
     '''
     This class creates a GUI for the program. It allows the user to select a folder, load a shapefile, generate a buffer, and solve the TSP.'''
     def __init__(self):
         self.config = Config()
+        self.config.set_default()
         self.folder_location = self.config.config['current_map']['folder_location']
         self.driver = None
         self.root = Tk()
@@ -25,25 +27,83 @@ class Gui:
         self.frm.grid()
 
         self.terminal = ttk.Label(self.frm, text="[Terminal]")
+    
+    
 
+    def check_necessities(self, method_name):
+        necessities = {
+            'select_folder': [],
+            'load_shapefile': ['folder_location'],
+            'add_to_terminal': [],
+            'generate_picture': ['driver'],
+            'save_output': ['driver'],
+            'load_next_buffer': ['driver'],
+            'load_next_standing_location': ['driver'],
+            'generate_points': ['driver'],
+            'generate_transects': ['driver',('driver','cities')],
+            'solve_tsp': ['driver',('driver','cities')],
+            'solve_transects': ['driver',('driver','transects')],
+            'view_threed': ['driver'],
+        }
+    
+        missing = []
+        for key in necessities.get(method_name, []):
+            if isinstance(key, tuple):
+                obj= key[0]
+                attr = key[1]
+                value = getattr(self, obj, None)
+                attr_value = getattr(value, attr, None)
+                if attr_value is None or attr_value == []:
+                    missing.append(attr)
+                    break
+                
 
+            else:
+                value = getattr(self, key, None)
+                if value in [None, '']:
+                    missing.append(key)    
+                    break
+        if missing:
+            self.log_error(missing[0])
+            # self.add_to_terminal(f"Missing {missing} for {method_name}")
+            raise ValueError(f"Missing {missing} for {method_name}")
+    
+        return True
+
+    def log_error(self, error):
+        '''
+        Logs the error to the terminal
+        '''
+        errors={
+            'driver':'101: Driver not loaded',
+            'folder_location':'102: Folder location not set',
+            'cities':'104: Cities not generated',
+            'transects':'103: Transects not generated',
+            'no path':'105: No path generated',
+        }
+        if error in errors:
+            self.add_to_terminal(errors[error])
 
 
     def select_folder(self):
         '''
         Function to select a folder using a file dialog. The selected folder is stored in the config file.
         '''
+        self.check_necessities('select_folder')
         self.folder_location = askdirectory(initialdir="/Users/maxrobertson/Documents/")
         self.config.config['current_map']['folder_location'] = self.folder_location
         self.add_to_terminal("Folder selected")
-
+        
         self.config.save_config()
 
-    def load_shapefile(self):
+    def load_shapefile(self,folder_location=None):
         '''
         Function to load a shapefile. It creates a Driver object and loads the shapefile. It also generates a buffer and a picture of the buffer.
         Expensive to run
         '''
+        if folder_location is not None:
+            self.folder_location = folder_location
+
         number_of_points = int(self.config.config['distances']['number_of_points_per_area'])
         if self.folder_location == '':
             if self.config.config['current_map']['folder_location'] == '':
@@ -54,12 +114,13 @@ class Gui:
             else:
                 self.folder_location = self.config.config['current_map']['folder_location']
                 self.add_to_terminal("Loading shapefile, from previous load")
+        self.check_necessities('load_shapefile')
         self.add_to_terminal("Loading shapefile")
         self.driver = Driver(self.folder_location,number_of_points)
         self.driver.buffer_coords=[]
         try:
             self.driver.load_shp_file()
-        except FileNotFoundError:
+        except (FileNotFoundError,ValueError):
             self.add_to_terminal("Shapefile not found, please try again")
             return
         self.driver.clean_buffers(len(self.driver.buffer_coords))
@@ -71,6 +132,7 @@ class Gui:
         '''
         Adds text to the terminal label
         '''
+        self.check_necessities('add_to_terminal')
         number_of_lines = int(self.terminal['text'].count('\n'))
         if number_of_lines > 8:
             self.terminal['text'] = self.terminal['text'].split('\n', 1)[1]
@@ -87,7 +149,8 @@ class Gui:
                          path=False,
                          transects=False,
                          transect_path=False,
-                         transect_all_points=False):
+                         transect_all_points=False,
+                         test=False):
         '''
         Generates a picture depending on the parameters given. It uses matplotlib to plot the points and lines.
         Saves the picture in the Output folder
@@ -146,8 +209,12 @@ class Gui:
         plt.legend(fontsize='12',
                 loc='best')
         plt.savefig(os.path.join(output_path, graph_name))
-        plt.close()
+        if not test:
+            plt.close()
+        
         self.update_image()
+        if test:
+            return plt.gcf()
 
     def save_output(self):
         '''
@@ -155,6 +222,10 @@ class Gui:
         This is compataible with Flylichi\n
         Requires implementation of camera and speed operations
         '''
+        self.check_necessities('save_output')
+        if not self.driver.transect_path or not self.driver.best_path_coords:
+            self.log_error('no path')
+            return
         seen_interpolated = []
         
         height = float(self.config.config['distances']['height_above_ground_m'])
@@ -162,6 +233,8 @@ class Gui:
             threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.transect_path)
             # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.transect_path]
         else:
+            if not isinstance(self.driver.best_path_coords[0][1],bool):
+                self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords]
             threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.best_path_coords)
 
             # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.best_path_coords]
@@ -180,9 +253,7 @@ class Gui:
         '''
         Cycles through all the buffers and regenerates the picture\n
         '''
-        if self.driver is None:
-            self.add_to_terminal("Load a shapefile first")
-            return
+        self.check_necessities('load_next_buffer')
 
         self.driver.current_buffer =(self.driver.current_buffer+ 1)%len(self.driver.buffer_coords)
         self.add_to_terminal("Buffer loaded")
@@ -193,9 +264,7 @@ class Gui:
     def load_next_standing_location(self):
         '''
         Cycles through all the standing locations and regenerates the picture\n'''
-        if self.driver is None:
-            self.add_to_terminal("Load a shapefile first")
-            return
+        self.check_necessities('load_next_standing_location')
         if len(self.driver.standing_locations) == 0:
             self.add_to_terminal("No standing locations present")
             return
@@ -206,6 +275,7 @@ class Gui:
         '''
         Loads the standing locations and generates points around them with DVLOS\n
         '''
+        self.check_necessities('generate_points')
         if self.driver is None:
             self.add_to_terminal("Please load a shapefile first")
             return
@@ -235,12 +305,7 @@ class Gui:
         '''
         Generates transects from the best path coordinates\n
         '''
-        if self.driver is None:
-            self.add_to_terminal("Please load a shapefile first")
-            return
-        if self.driver.best_path_coords == []:
-            self.add_to_terminal("Please solve the TSP first")
-            return
+        self.check_necessities('generate_transects')
 
         best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) if x not in self.driver.best_path_coords[:i]]
         self.driver.create_transects(best_path_coords_no_duplicates)
@@ -252,13 +317,8 @@ class Gui:
         '''
         Solves the TSP problem and generates pictures\n
         '''
+        self.check_necessities('solve_tsp')
         self.driver.transect_path=[]
-        if self.driver is None:
-            self.add_to_terminal("Please load a shapefile first")
-            return
-        if self.driver.cities == []:
-            self.add_to_terminal("Please generate points first")
-            return
         self.add_to_terminal("Solving TSP")
         self.driver.solve_tsp()
         self.add_to_terminal("TSP solved")
@@ -274,15 +334,8 @@ class Gui:
         '''
         Solve the transect route with brute force and generate pictures\n
         '''
-        if self.driver is None:
-            print("Please load a shapefile first")
-            self.add_to_terminal("Please load a shapefile first")
-
-            return
-        if self.driver.transects == []:
-            print("Please generate transects first")
-            self.add_to_terminal("Please generate transects first")
-            return
+        self.check_necessities('solve_transects')
+        
         self.add_to_terminal("Solving transect route")
 
         self.driver.solve_transect_route()
@@ -312,7 +365,13 @@ class Gui:
         '''
         Generates a 3D view of the point cloud and the latest path generated\n
         '''
+        self.check_necessities('view_threed')
+        if not self.driver.transect_path or not self.driver.best_path_coords:
+            self.log_error('no path')
+            return
+
         self.add_to_terminal("Generating 3D view")
+        
         if self.driver.standing_locations:
             standing_location = self.driver.standing_locations[self.driver.current_standing_id]
         else:
@@ -323,7 +382,9 @@ class Gui:
                 human_location=standing_location,
                 dvlos = True,
                 best_path_coords=self.driver.transect_path) 
-            return   
+            return
+        if not isinstance(self.driver.best_path_coords[0][1],bool):
+            self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
         self.driver.pointcloudholder.show_point_cloud(
             cities=self.driver.cities,
             human_location=standing_location,
