@@ -24,31 +24,51 @@ class PointCloud:
         self.kdtree = None
         self.dvlos_lines = []
     
-    def read_tif(self,xyz = None)-> KDTree:
+    def read_tif(self, xyz=None) -> KDTree:
         '''
-        Reads the tif file saving data into a kdtree\n
+        Efficiently reads the .tif file and builds a KDTree from valid elevation points.
         '''
-
         if xyz is None:
             possible_files = [file for file in os.listdir(self.tif_path) if file.endswith('.tif')]
             if len(possible_files) != 1:
                 raise ValueError("There should be exactly one .tif file in the folder.")
+
             tif_filepath = os.path.join(self.tif_path, possible_files[0])
-            xyz = [] # List of points
+            
             with rasterio.open(tif_filepath) as dataset:
                 image = dataset.read(1)
                 transform = dataset.transform
-                for row in range(image.shape[0]):
-                    for col in range(image.shape[1]):
-                        point = image[row, col]
-                        if point > -1000 and point < 2000:
-                            x, y = transform * (col, row)
-                            xyz.append([x,y,point])
-        self.xyz = np.array(xyz)
-        kdtree = KDTree(self.xyz[:,:2])
-        self.kdtree = kdtree
-        return kdtree
-    
+                nodata = dataset.nodata
+
+                rows, cols = np.indices(image.shape)
+
+                rows_flat = rows.ravel()
+                cols_flat = cols.ravel()
+                elevation_flat = image.ravel()
+
+                # mask for valid elevation values
+                valid_mask = (elevation_flat > -1000) & (elevation_flat < 2000)
+                if nodata is not None:
+                    valid_mask &= (elevation_flat != nodata)
+
+                # removes large and small values
+                rows_valid = rows_flat[valid_mask]
+                cols_valid = cols_flat[valid_mask]
+                elevation_valid = elevation_flat[valid_mask]
+
+                # affine transform to get X, Y coordinates
+                xs, ys = rasterio.transform.xy(transform, rows_valid, cols_valid)
+                xs = np.array(xs)
+                ys = np.array(ys)
+
+                self.xyz = np.column_stack((xs, ys, elevation_valid))
+
+        else:
+            self.xyz = np.array(xyz)
+
+        self.kdtree = KDTree(self.xyz[:, :2])
+        return self.kdtree
+
     def nearest_point(self,
                       point:XYCoordinate|XYZCoordinate,
                       )-> XYZCoordinate:
@@ -245,6 +265,7 @@ class PointCloud:
 
 
 if __name__ == "__main__":
-    point_cloud = PointCloud('Data/MGAT_01201/Base_Data/')
+    point_cloud = PointCloud('example data/hodhill')
+    point_cloud.read_tif()
     point_cloud.show_point_cloud()
     
