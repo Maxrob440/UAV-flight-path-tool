@@ -130,7 +130,7 @@ class Driver:
                 try:
                     x, y = float(coords[0]), float(coords[1])
                     self.standing_locations.append((x, y,self.pointcloudholder.find_altitude((x,y),human_height)))
-                except ValueError:
+                except ValueError as e:
                     print(f"Invalid coordinates: {coords}")
 
 
