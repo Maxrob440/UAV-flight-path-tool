@@ -305,13 +305,17 @@ class Gui:
         '''
         Generates transects from the best path coordinates\n
         '''
-        self.check_necessities('generate_transects')
+        try:
+            self.check_necessities('generate_transects')
 
-        best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) if x not in self.driver.best_path_coords[:i]]
-        self.driver.create_transects(best_path_coords_no_duplicates)
-        self.add_to_terminal("Transects generated")
-        self.generate_picture(cities = True,
-                              transects = True)
+            best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) if x not in self.driver.best_path_coords[:i]]
+            self.driver.create_transects(best_path_coords_no_duplicates)
+            self.add_to_terminal("Transects generated")
+            self.generate_picture(cities = True,
+                                transects = True)
+        except ValueError as e:
+            self.add_to_terminal("Error in transect generation")
+            print(e)
 
     def solve_tsp(self):
         '''
@@ -366,7 +370,8 @@ class Gui:
         Generates a 3D view of the point cloud and the latest path generated\n
         '''
         self.check_necessities('view_threed')
-        if not self.driver.transect_path or not self.driver.best_path_coords:
+
+        if not self.driver.transect_path and not self.driver.best_path_coords:
             self.log_error('no path')
             return
 
@@ -384,12 +389,15 @@ class Gui:
                 best_path_coords=self.driver.transect_path) 
             return
         if not isinstance(self.driver.best_path_coords[0][1],bool):
-            self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
+            best_path_coords_bool = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
+        else:
+            best_path_coords_bool = self.driver.best_path_coords
         self.driver.pointcloudholder.show_point_cloud(
             cities=self.driver.cities,
             human_location=standing_location,
             dvlos = True,
-            best_path_coords=self.driver.best_path_coords)
+            best_path_coords=best_path_coords_bool)
+        self.add_to_terminal("3D view generated")
 
 
     def create_config_window(self):
