@@ -285,17 +285,20 @@ class Gui:
         self.driver.pointcloudholder.dvlos_lines=[]
         self.driver.transect_path = []
         self.driver.transects = []
-        try:
-            self.driver.load_standing_locations()
-            self.config.config['current_map']['human_location'] = self.driver.standing_locations
-            xystart = (self.driver.standing_locations[self.driver.current_standing_id][0],self.driver.standing_locations[self.driver.current_standing_id][1])
-            self.add_to_terminal("Standing location loaded")
-        except Exception: # value and index errors
-            xystart=None
-            self.add_to_terminal("Error loading standing locations, ensure a .txt file is present")
         self.add_to_terminal("Generating point cloud")
         self.driver.pointcloudholder.read_tif()
         self.add_to_terminal("Point cloud loaded")
+        try:
+            self.driver.load_standing_locations()
+            self.config.config['current_map']['human_location'] = self.driver.standing_locations
+            self.config.save_config()
+            xystart = (self.driver.standing_locations[self.driver.current_standing_id][0],self.driver.standing_locations[self.driver.current_standing_id][1])
+            self.add_to_terminal("Standing location loaded")
+        except (ValueError,IndexError) as e: # value and index errors
+            print(e)
+            xystart=None
+            self.add_to_terminal("Error loading standing locations, ensure a .txt file is present")
+
         self.add_to_terminal("Generating points")
         self.driver.generate_points(xystart)
         self.add_to_terminal("Points generated")
