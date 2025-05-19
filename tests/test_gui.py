@@ -54,7 +54,7 @@ def test_generate_picture_with_all():
 def test_load_shape_file_with_params():
     
     gui = Gui()
-    gui.config.config['distances']['buffer_m'] = 10 # Default is 30 which for shape file is too much
+    gui.config.config['distances']['buffer_m'] = -1 # Default is 30 which for shape file is too much
     gui.config.save_config()
     gui.load_shapefile('tests/test_files/test_shp')
     assert len(gui.driver.buffer_coords) == 1
@@ -62,7 +62,7 @@ def test_load_shape_file_with_params():
 
 def test_load_shape_file_from_config():
     gui = Gui()
-    gui.config.config['distances']['buffer_m'] = 10 # Default is 30 which for shape file is too much
+    gui.config.config['distances']['buffer_m'] = -1 # Default is 30 which for shape file is too much
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/test_shp'
     gui.config.save_config()
     gui.load_shapefile()
@@ -71,7 +71,7 @@ def test_load_shape_file_from_config():
 
 def test_load_shape_file_from_config_no_folder():
     gui = Gui()
-    gui.config.config['distances']['buffer_m'] = 10 # Default is 30 which for shape file is too much
+    gui.config.config['distances']['buffer_m'] = -10 # Default is 30 which for shape file is too much
     gui.config.config['current_map']['folder_location'] = ''
     gui.config.save_config()
     gui.load_shapefile()
@@ -80,7 +80,7 @@ def test_load_shape_file_from_config_no_folder():
 
 def test_load_load_shape_file_not_found():
     gui = Gui()
-    gui.config.config['distances']['buffer_m'] = 10 # Default is 30 which for shape file is too much
+    gui.config.config['distances']['buffer_m'] = -10 # Default is 30 which for shape file is too much
     gui.config.save_config()
     gui.load_shapefile('Fake path')
     assert gui.terminal['text'] == "Shapefile not found, please try again"
@@ -116,6 +116,7 @@ def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
     gui.generate_points()
     gui.solve_tsp()
     gui.view_threed()
+    assert gui.terminal['text'] == '3D view generated'
 
 def test_save_output_of_just_TSP_path():
     gui = Gui()
@@ -128,4 +129,33 @@ def test_save_output_of_just_TSP_path():
     gui.save_output()
 
     # assert os.path.exists(os.path.join(gui.config.config['io']['output_folder'], 'TSP_path.txt'))
-    
+
+@patch('open3d.visualization.draw_geometries')
+def test_transect_generation_after_viewing_threed(mock_draw_geometries):
+    gui= Gui()
+    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
+    gui.config.save_config()
+    gui.load_shapefile()
+    gui.generate_points()
+    gui.solve_tsp()
+    gui.view_threed()
+    gui.generate_transects()
+    assert gui.terminal['text'] == 'Transects generated'
+
+@patch('open3d.visualization.draw_geometries')
+def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_geometries):
+    gui= Gui()
+    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
+    gui.config.save_config()
+    gui.load_shapefile()
+    gui.generate_points()
+    gui.solve_tsp()
+    gui.generate_transects()
+    gui.solve_transects()
+    gui.view_threed()
+    gui.generate_transects()
+    assert gui.terminal['text'] == 'Transects generated'
+
+
