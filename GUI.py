@@ -244,9 +244,10 @@ class Gui:
         saver = Converter(self.driver.folder_path)
         saver.convert_mercader_to_lat_long(seen_interpolated)
         saver.create_bearings()
-        output_name = self.config.config['io']['output_file_name']
+
         buffer_id = self.driver.current_buffer
-        saver.create_csv(output_name,str(buffer_id))
+        saver.save_all(buffer_id,self.driver.transects,self.driver.folder_path)
+        # saver.create_csv(str(buffer_id))
         self.add_to_terminal("Output saved")
 
     def load_next_buffer(self):

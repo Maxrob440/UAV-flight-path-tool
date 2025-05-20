@@ -57,6 +57,12 @@ class Driver:
         possible_files = [file for file in os.listdir(self.folder_path) if file.endswith('.shp')]
         if len(possible_files) != 1:
             raise ValueError(f"There should be exactly one .shp file in the folder, found: {len(possible_files)}")
+        
+        output_folder_name = possible_files[0].split('.')[0]
+        output_folder_name = output_folder_name.split('_bdy')[0]
+        self.config.config['io']['specific_folder_name'] = output_folder_name
+        self.config.save_config()
+
         shp_file = os.path.join(self.folder_path, possible_files[0])
         buffer_distance = float(self.config.config['distances']['buffer_m'])
 
@@ -320,7 +326,6 @@ class Driver:
     def create_transects(self,ordered_points:Coordinates):
         transect_length = float(self.config.config['distances']['transect_length_m'])
         transects = {}
-        transect_generator = TransectGenerator()
         for point in ordered_points:
             while True:
                 transect = []
@@ -337,11 +342,11 @@ class Driver:
             if point in self.cities and point!=self.cities[0]:
                 transects[point]=transect
 
-                transect_generator.add_transect(transect)
+                # transect_generator.add_transect(transect)
             else:
                 transects[point]=[point]
         self.transects = transects
-        transect_generator.save()
+        # transect_generator.save()
 
     def solve_transect_route(self):
         '''

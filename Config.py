@@ -72,7 +72,10 @@ class Config:
                 "output_folder": "OUTPUT",
                 "graph_picture_name": "graph.png",
                 "input_folder": "Data",
-                "output_file_name": "PATH"
+                "specific_folder_name": "Examples",
+                "output_CSV_file_name": "PATH",
+                "output_transect_file_name":"transects"
+
                 },
             "ant_colony":{
                 "number_of_ants": "10",

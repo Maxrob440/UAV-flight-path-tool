@@ -1,11 +1,13 @@
 from math import atan2,radians, degrees, sin, cos
 import os
 import numpy as np
+import shutil
 
 import rasterio
 from pyproj import Transformer
 import pandas as pd
-
+from Config import Config
+from shp_file_generator import TransectGenerator
 
 
 class Converter:
@@ -13,6 +15,7 @@ class Converter:
     The converter class takes an input of the tif file
     '''
     def __init__(self,tif_file):
+        self.config = Config()
         self.tif_file = tif_file
         self.lat_long_coords = []
         self.bearings = []
@@ -60,7 +63,9 @@ class Converter:
         self.bearings.append(0) #Add 0 to the end of the list to make it the same length as lat_long_coords
         return bearings #Small errors here about a degree
     
-    def create_csv(self,flight_name,flight_no):
+
+
+    def create_csv(self,flight_no):
         '''
         Transforms the route data into a csv file that can be read by flylichi
         if the point is a part of the transets then the speed is 0.8 m/s and the photo interval is 2 seconds
@@ -79,7 +84,45 @@ class Converter:
                 photo_distinterval = -1
 
             df.loc[ind]=([point[0],point[1],point[2],self.bearings[ind],0.2,0,0,0,5,-90,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,0,speed,0,0,0,0,photo_timeinterval,photo_distinterval])
-        os.makedirs('OUTPUT',exist_ok=True)
-        df.to_csv(f'OUTPUT/{flight_name}_FLIGHT_{flight_no}.csv', index=False)
+        
+        output_folder = self.config.config['io']['output_folder']
+        specific_folder = self.config.config['io']['specific_folder_name']
+        csv_path = self.config.config['io']['output_CSV_file_name'] + f'{flight_no}.csv'
+        output_path = os.path.join(output_folder, specific_folder)
+        csv_path = os.path.join(output_path, csv_path)
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        
+        
+        df.to_csv(csv_path, index=False)
+
+    def save_transects(self,transects,flight_no):
+        trans_generator = TransectGenerator(flight_no)
+        for transect in transects.values():
+            if len(transect) == 1:
+                continue
+            trans_generator.add_transect(transect)
+        trans_generator.save()
+
+    def save_dem_shp(self,folder_path):
+        output_folder = self.config.config['io']['output_folder']
+        specific_folder = self.config.config['io']['specific_folder_name']
+
+        print(folder_path)
+
+        shp_file_path = [path for path in os.listdir(folder_path) if path.endswith('.shp')][0]
+        tif_file_path = [path for path in os.listdir(folder_path) if path.endswith('.tif')][0]
+        shp_file_path = os.path.join(folder_path, shp_file_path)
+        tif_file_path = os.path.join(folder_path, tif_file_path)
+        shutil.copy(shp_file_path, os.path.join(output_folder, specific_folder))
+        shutil.copy(tif_file_path, os.path.join(output_folder, specific_folder))
+
+
+    def save_all(self,flight_no,transects,folder_path):
+        self.create_csv(flight_no)
+        self.save_transects(transects,flight_no)
+        self.save_dem_shp(folder_path)
+
+        
     
 
