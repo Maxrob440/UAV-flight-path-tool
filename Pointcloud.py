@@ -200,7 +200,8 @@ class PointCloud:
                          cities:XYCoordinates=None,
                          human_location:XYZCoordinate = None,
                          dvlos:bool=True,
-                         best_path_coords:XYCoordinates = None)-> None:
+                         best_path_coords:XYCoordinates = None,
+                         buffer_coords:XYCoordinates=None)-> None:
         '''
         Shows the point cloud\n
         '''
@@ -208,6 +209,7 @@ class PointCloud:
         if not cities: cities = []
         if not human_location: human_location = []
         if not best_path_coords: best_path_coords = []
+        if not buffer_coords: buffer_coords = []
 
         uav_height = float(self.config.config['distances']['height_above_ground_m'])
         add_to_point_cloud = []
@@ -233,6 +235,11 @@ class PointCloud:
 
             for city in cities:
                 self.add_line_to_pointcloud(human_location,city)
+        if buffer_coords:
+            for point in range(len(buffer_coords)-1):
+                self.add_line_to_pointcloud(buffer_coords[point],buffer_coords[point+1],[0,1,0])
+                               
+                
         if self.dvlos_lines:            
             for line in self.dvlos_lines:
                 add_to_point_cloud.append(line)

@@ -394,7 +394,8 @@ class Gui:
                 cities=self.driver.cities,
                 human_location=standing_location,
                 dvlos = True,
-                best_path_coords=self.driver.transect_path) 
+                best_path_coords=self.driver.transect_path,
+                buffer_coords=self.driver.buffer_coords[self.driver.current_buffer]) 
             return
         if not isinstance(self.driver.best_path_coords[0][1],bool):
             best_path_coords_bool = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
@@ -404,7 +405,9 @@ class Gui:
             cities=self.driver.cities,
             human_location=standing_location,
             dvlos = True,
-            best_path_coords=best_path_coords_bool)
+            best_path_coords=best_path_coords_bool,
+            buffer_coords=self.driver.buffer_coords[self.driver.current_buffer]
+            )
         self.add_to_terminal("3D view generated")
 
 
