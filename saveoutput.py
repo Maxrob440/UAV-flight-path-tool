@@ -114,8 +114,13 @@ class Converter:
         tif_file_path = [path for path in os.listdir(folder_path) if path.endswith('.tif')][0]
         shp_file_path = os.path.join(folder_path, shp_file_path)
         tif_file_path = os.path.join(folder_path, tif_file_path)
-        shutil.copy(shp_file_path, os.path.join(output_folder, specific_folder))
-        shutil.copy(tif_file_path, os.path.join(output_folder, specific_folder))
+
+        save_path = os.path.join(output_folder, specific_folder)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        shutil.copy(shp_file_path, save_path)
+        shutil.copy(tif_file_path, save_path)
 
 
     def save_all(self,flight_no,transects,folder_path):
