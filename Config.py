@@ -53,7 +53,8 @@ class Config:
                     "transect_length_m": "25",
                     "interpolation_distance_m": "10",
                     "number_of_points_per_area": "8",
-                    "human_height_above_ground_m":"4"
+                    "human_height_above_ground_m":"4",
+                    "grid_size_m":"100"
             },
 
             "current_map":{

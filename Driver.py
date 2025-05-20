@@ -10,6 +10,7 @@ from Config import Config
 from Pointcloud import PointCloud
 from pathfinding import Pathfinder,AntColony,BruteForce
 import matplotlib.pyplot as plt
+from shp_file_generator import TransectGenerator
 
 Coordinate = tuple[float, float]
 Coordinates = list[Coordinate]
@@ -196,7 +197,63 @@ class Driver:
                 return True  # if inside return
 
             return False  # Not inside any buffer
-    def generate_points(self,starting_point:Coordinate=None,points=None)->Coordinates:
+    
+    def generate_points_standard(self,starting_point:Coordinate=None,points=None)->Coordinates:
+        '''
+        Creates a rectangle around the buffer and produces alinear set of points inside the buffer.\n
+        '''
+        if points:
+            if not isinstance(points, list) or not all(isinstance(point, tuple) and len(point) == 3 for point in points):
+                raise ValueError("Points must be a list of tuples with 3 elements each.")
+            
+        buffer_id = self.current_buffer
+        uav_height = float(self.config.config['distances']['height_above_ground_m'])
+
+        x_values = [x[0] for x in self.buffer_coords[buffer_id]]
+        y_values = [y[1] for y in self.buffer_coords[buffer_id]]
+        min_x, max_x = min(x_values), max(x_values)
+        min_y, max_y = min(y_values), max(y_values)
+        
+        height_of_rectangle = max_y - min_y
+        width_of_rectangle = max_x - min_x
+
+        distance_between_points_in_hexagons = float(self.config.config['distances']['grid_size_m'])
+        no_rows = int(height_of_rectangle / distance_between_points_in_hexagons)
+        no_columns = int(width_of_rectangle / distance_between_points_in_hexagons)
+        points = []
+
+        if starting_point is not None:
+            points.append(starting_point)
+
+        for i in range(no_rows):
+            for j in range(no_columns):
+
+                x = min_x + j * distance_between_points_in_hexagons
+                y = min_y + i * distance_between_points_in_hexagons
+                if i %2==1:
+                    x=x+(distance_between_points_in_hexagons/2)
+                
+                
+                if self.inside_shape(x,y,self.buffer_coords[buffer_id]):
+                    if self.standing_locations:
+                        standing_location = self.standing_locations[self.current_standing_id]
+                        human_height = float(self.config.config['distances']['human_height_above_ground_m'])
+                        standing_location_xyz = (standing_location[0],standing_location[1],self.pointcloudholder.find_altitude((standing_location[0],standing_location[1]),human_height))
+                        if not self.pointcloudholder.two_points_visible(standing_location_xyz,(x,y,self.pointcloudholder.find_altitude((x,y),uav_height))):
+                            continue
+                    if points is not None:
+                        if (x,y) in points:
+                            continue
+                    if starting_point is not None:
+                        if (x,y) == starting_point:
+                            continue
+                    points.append((x, y))
+        self.cities = points
+        return points
+
+
+
+    def generate_points_random(self,starting_point:Coordinate=None,points=None)->Coordinates:
         '''
         Generates random points inside the buffer area.\n
 
@@ -278,9 +335,13 @@ class Driver:
                     break
             if point in self.cities and point!=self.cities[0]:
                 transects[point]=transect
+
+                transect_generator = TransectGenerator()
+                transect_generator.add_transect(transect)
             else:
                 transects[point]=[point]
         self.transects = transects
+        transect_generator.save()
 
     def solve_transect_route(self):
         '''
@@ -360,18 +421,16 @@ class Driver:
 example_cities = [(2023505, 5753392), (2023702, 5753752), (2023289, 5753823)]
 if __name__ == "__main__":
     driver = Driver(
-        folder_path='Data/MGAT_01201/Base_Data',
+        folder_path='example data/hodhill',
     )
     driver.load_shp_file()
     driver.clean_buffers(1)
-    driver.load_standing_locations()
-    driver.generate_points()    
+    driver.generate_points_standard()    
 
-
+    driver.pointcloudholder.read_tif()
     driver.solve_tsp()
     driver.pointcloudholder.show_point_cloud(
         cities=driver.cities,
-        human_location=driver.standing_locations[driver.current_standing_id],
         dvlos = True,
         best_path_coords=driver.best_path_coords_interpolated)
 

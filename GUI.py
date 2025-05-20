@@ -300,7 +300,7 @@ class Gui:
             self.add_to_terminal("Error loading standing locations, ensure a .txt file is present")
 
         self.add_to_terminal("Generating points")
-        self.driver.generate_points(xystart)
+        self.driver.generate_points_standard(xystart)
         self.add_to_terminal("Points generated")
         self.generate_picture(cities=True)
 
