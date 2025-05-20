@@ -333,10 +333,10 @@ class Driver:
                 transect.append(third_point)
                 if self.inside_shape(third_point[0],third_point[1],self.buffer_coords[self.current_buffer]) and self.inside_shape(second_point[0],second_point[1],self.buffer_coords[self.current_buffer]):
                     break
+            transect_generator = TransectGenerator()
             if point in self.cities and point!=self.cities[0]:
                 transects[point]=transect
 
-                transect_generator = TransectGenerator()
                 transect_generator.add_transect(transect)
             else:
                 transects[point]=[point]
