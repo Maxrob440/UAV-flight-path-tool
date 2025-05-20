@@ -107,20 +107,23 @@ class Converter:
     def save_dem_shp(self,folder_path):
         output_folder = self.config.config['io']['output_folder']
         specific_folder = self.config.config['io']['specific_folder_name']
-
-        print(folder_path)
-
-        shp_file_path = [path for path in os.listdir(folder_path) if path.endswith('.shp')][0]
-        tif_file_path = [path for path in os.listdir(folder_path) if path.endswith('.tif')][0]
-        shp_file_path = os.path.join(folder_path, shp_file_path)
-        tif_file_path = os.path.join(folder_path, tif_file_path)
-
         save_path = os.path.join(output_folder, specific_folder)
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-        shutil.copy(shp_file_path, save_path)
-        shutil.copy(tif_file_path, save_path)
+        to_save= []
+        wanted_files =['.shp','.dbf','.prj','.shx','.tif']
+        for path in os.listdir(folder_path):
+            if path.endswith(tuple(wanted_files)):
+                to_save.append(path)
+        for path in to_save:
+                old_path = os.path.join(folder_path, path)
+                new_path= os.path.join(output_folder, specific_folder, path)
+                shutil.copy(old_path, new_path)
+
+
+
 
 
     def save_all(self,flight_no,transects,folder_path):
