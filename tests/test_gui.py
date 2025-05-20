@@ -92,6 +92,8 @@ def test_integration_correct_orders(mock_draw_geometries):
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
+    
 
     gui.config.save_config()
     gui.load_shapefile()
@@ -114,6 +116,7 @@ def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
 
     gui.config.save_config()
     gui.load_shapefile()
@@ -127,6 +130,7 @@ def test_save_output_of_just_TSP_path():
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
 
     gui.config.save_config()
     gui.load_shapefile()
@@ -142,6 +146,7 @@ def test_transect_generation_after_viewing_threed(mock_draw_geometries):
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
 
     gui.config.save_config()
     gui.load_shapefile()
@@ -157,6 +162,7 @@ def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
 
     gui.config.save_config()
     gui.load_shapefile()
@@ -187,6 +193,7 @@ def test_route_generation_after_moving_standing_location():
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test_with_multiple_standing_locations'
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    gui.config.config['distances']['grid_size_m'] = 20
     
     gui.config.save_config()
 

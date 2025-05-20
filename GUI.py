@@ -342,7 +342,11 @@ class Gui:
         Solve the transect route with brute force and generate pictures\n
         '''
         self.check_necessities('solve_transects')
-        
+        if len(self.driver.transects) >= 30:
+            self.add_to_terminal("Too many transects to solve, please reduce the number of points")
+            return        
+
+
         self.add_to_terminal("Solving transect route")
 
         self.driver.solve_transect_route()

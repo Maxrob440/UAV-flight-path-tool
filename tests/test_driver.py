@@ -62,10 +62,10 @@ def test_load_standing_locations_from_params():
 
 def test_generate_points_from_parameters():
     driver = Driver()
-    driver.generate_points(points=[(0,0,0), (1,1,1)])
+    driver.generate_points_random(points=[(0,0,0), (1,1,1)])
     assert driver.cities == [(0,0,0), (1,1,1)]
 
-    driver.generate_points(starting_point=(-1,-1,-1),points=[(0,0,0), (1,1,1)])
+    driver.generate_points_random(starting_point=(-1,-1,-1),points=[(0,0,0), (1,1,1)])
     assert driver.cities == [(-1,-1,-1),(0,0,0), (1,1,1)], "Driver should generate points correctly"
 
 
@@ -81,7 +81,7 @@ def test_generate_points_inside_square():
 
     driver = Driver()
     driver.buffer_coords=[[(0,0),(1,1),(1,0),(0,1)]]
-    driver.generate_points()
+    driver.generate_points_random()
     assert len(driver.cities)==8
     for point in driver.cities:
         assert point[0] >= 0 and point[0] <= 1
@@ -94,7 +94,7 @@ def test_generate_points_inside_square_forcing_distance_below_minimum():
 
     driver = Driver()
     driver.buffer_coords=[[(0,0),(1,1),(1,0),(0,1)]]
-    driver.generate_points()
+    driver.generate_points_random()
     assert len(driver.cities)==1
 
 
@@ -115,7 +115,7 @@ def test_generate_points_inside_square_with_DVLOS():
     driver.folder_path='tests/test_files/single_standing_location'
     driver.load_standing_locations()
 
-    driver.generate_points()
+    driver.generate_points_random()
     # standing_location = driver.standing_locations[0]
     # driver.pointcloudholder.show_point_cloud(driver.cities,standing_location)
 
@@ -145,19 +145,19 @@ def test_solve_tsp_ant():
 def test_generate_transects():
     driver = Driver()
     driver.buffer_coords=[[(0,0),(50,50),(50,0),(0,50)]]
-    driver.cities = [(1,1,0),(2,2,0)]
-    driver.create_transects([(1,1,0),(2,2,0)])
+    driver.cities = [(1,1),(2,2)]
+    driver.create_transects([(1,1),(2,2)])
     print(driver.transects)
     assert len(driver.transects) == 2
-    assert (1,1,0) in driver.transects
-    assert len(driver.transects[(1,1,0)]) == 1 #First point doessnt get a transect
-    assert len(driver.transects[(1,1,0)][0]) == 3
+    assert (1,1) in driver.transects
+    assert len(driver.transects[(1,1)]) == 1 #First point doessnt get a transect
+    assert len(driver.transects[(1,1)][0]) == 2
 
-    assert (2,2,0) in driver.transects
-    assert len(driver.transects[(2,2,0)]) == 3 #All other points do
-    assert len(driver.transects[(2,2,0)][0]) == 3
-    assert driver.transects[(2,2,0)][0]==(2,2,0)
-    for transect in driver.transects[(2,2,0)]:
+    assert (2,2) in driver.transects
+    assert len(driver.transects[(2,2)]) == 3 #All other points do
+    assert len(driver.transects[(2,2)][0]) == 2
+    assert driver.transects[(2,2)][0]==(2,2)
+    for transect in driver.transects[(2,2)]:
         assert transect[0]<50 and transect[0]>0
         assert transect[1]<50 and transect[1]>0
         
