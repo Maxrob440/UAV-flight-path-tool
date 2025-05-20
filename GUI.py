@@ -439,7 +439,7 @@ class Gui:
 
         config_window = Toplevel(self.root)
         config_window.title("Configuration")
-        config_window.geometry("400x750")
+        config_window.geometry("400x900")
         
         ttk.Label(config_window, text="Configuration Options").grid(column=0, row=0)
         counter=0
