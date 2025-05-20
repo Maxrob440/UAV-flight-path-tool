@@ -320,6 +320,7 @@ class Driver:
     def create_transects(self,ordered_points:Coordinates):
         transect_length = float(self.config.config['distances']['transect_length_m'])
         transects = {}
+        transect_generator = TransectGenerator()
         for point in ordered_points:
             while True:
                 transect = []
@@ -333,7 +334,6 @@ class Driver:
                 transect.append(third_point)
                 if self.inside_shape(third_point[0],third_point[1],self.buffer_coords[self.current_buffer]) and self.inside_shape(second_point[0],second_point[1],self.buffer_coords[self.current_buffer]):
                     break
-            transect_generator = TransectGenerator()
             if point in self.cities and point!=self.cities[0]:
                 transects[point]=transect
 
