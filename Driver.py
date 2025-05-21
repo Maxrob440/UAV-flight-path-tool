@@ -8,7 +8,7 @@ from pprint import pprint
 
 from Config import Config
 from Pointcloud import PointCloud
-from pathfinding import Pathfinder,AntColony,BruteForce
+from pathfinding import Pathfinder,AntColony,BruteForce,Christofides
 import matplotlib.pyplot as plt
 from shp_file_generator import TransectGenerator
 
@@ -411,13 +411,24 @@ class Driver:
             standing_location = self.standing_locations[self.current_standing_id]
         else:
             standing_location = None
-
+        approx_pathfinder = None
         if len(self.cities) <=cutoff:
             pathfinder = BruteForce(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
         else:
             pathfinder = AntColony(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
+            approx_pathfinder = Christofides(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
+
+        
         print('Starting TSP solver...')
         path,distance = pathfinder.solve()
+        if approx_pathfinder:
+            approx_path,approx_distance = approx_pathfinder.solve()
+            if approx_distance< distance:
+                path = approx_path
+                print('Christofides is shorter than antcolony, using Christofides')
+                # raise RuntimeError('Christofides is shorter than antcolony, adjust ant colony settings')
+
+
         self.best_path_coords = path
         self.best_path_coords_interpolated = self.pointcloudholder.interpolate_route(path)
         print('TSP solved.')

@@ -604,3 +604,168 @@ class BruteForce(Pathfinder):
             path_fillers.extend(path_between[1:])  # skip first point to avoid duplication
         self.best_path = path_fillers
         return self.best_path,self.best_distance
+
+class Christofides(Pathfinder):
+    '''
+    Uses Christofides algorithm to solve the TSP approximatley with guarrentee of less than 1.5 times the optimal solution.\n
+    '''
+    def __init__(self,
+                 cities:XYCoordinates,
+                  obstacles:list[XYCoordinates],
+                  pointcloud:object,
+                  human_location:XYZCoordinate,
+                  step:float,
+                  current_buffer:int):
+        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer)
+
+    def create_minimum_spanning_tree(self,
+                                     start:tuple)->list[tuple[XYCoordinate,XYCoordinate]]:
+        '''
+        Transforms the graph of connections into a minimum spanning tree\n
+        Uses Prim's algorithm to find the minimum spanning tree.\n
+        The minimum spanning tree is a subset of the edges that connects all vertices with the minimum possible total edge weight.\n
+        '''
+        visited = {start}
+        unvisited = set(self.cities) - {start}
+        mst_edges = []
+
+        while unvisited:
+            shortest_edge = float('inf')
+            shortest_edge_points = None
+
+            for point1 in visited: #Find shortest connection between visited and unvisited
+                for point2 in unvisited:
+                    if self.distances[(point1, point2)][1] < shortest_edge:
+                        shortest_edge = self.distances[(point1, point2)][1]
+                        shortest_edge_points = (point1, point2)
+            if not shortest_edge_points:
+                raise ValueError('Graph is disconnected')
+            
+            mst_edges.append(shortest_edge_points)
+            visited.add(shortest_edge_points[1])
+            unvisited.remove(shortest_edge_points[1])
+        return mst_edges
+    
+    def find_odd_verticies_mms(self,mst)->set:
+        '''
+        Finds any vertice that has been visited on odd number of times\n
+        '''
+        odd_vertices = set()
+        for connection in mst:
+            for point in connection:
+                if point not in odd_vertices:
+                    odd_vertices.add(point)
+                else:
+                    odd_vertices.remove(point)
+        return odd_vertices
+    
+    def minimum_weight_matching(self,odd_vertices:set)->list[tuple[XYCoordinate,XYCoordinate]]:
+        possible_matches = []
+        possible_matches_distance = []
+
+        for vert1 in odd_vertices:
+            for vert2 in odd_vertices:
+                if vert1 == vert2:
+                    continue
+                if (vert1,vert2) in possible_matches:
+                    continue
+                if (vert2,vert1) in possible_matches:
+                    continue
+                possible_matches.append((vert1,vert2))
+                possible_matches_distance.append(((vert1,vert2),self.distances[(vert1,vert2)][1]))
+        possible_matches_distance.sort(key=lambda x: x[1])
+        matched = set()
+        matching = []
+        for (u,v),distance in possible_matches_distance:
+            if u not in matched and v not in matched:
+                matching.append(((u,v),distance))
+                matched.add(u)
+                matched.add(v)
+        return matching
+
+    def form_multigraph(self,mst,matched):
+        multigraph_connections = []
+        for connection in mst:
+            multigraph_connections.append(connection)
+        for connection in matched:
+            multigraph_connections.append(connection[0])
+        return multigraph_connections
+    
+    def eulerian_tour(self,multigraph):
+        seen = []
+        vertices = []
+        connections = []
+
+        #Make bidirections
+        for connection in multigraph:
+            connections.append(connection)
+            connections.append((connection[1],connection[0]))
+
+        connections = list(connections)
+
+
+        for connection in connections:
+            if connection not in seen:
+                seen.append(connection)
+                vertices.append(connection[0])
+        return vertices
+
+    def generate_tsp(self,connections):
+        start = connections[0]
+        unvisited = set(connections)
+        unvisited.remove(start)
+        tour = [start]
+        
+        current = start
+
+        while unvisited:
+            nearest, min_dist = None, float('inf')
+            for neighbor in unvisited:
+                dist = self.distances[(current, neighbor)][1]
+                if dist < min_dist:
+                    nearest, min_dist = neighbor, dist
+
+            if nearest is None:
+                break  
+            
+            tour.append(nearest)
+            unvisited.remove(nearest)
+            current = nearest
+        
+        # Return to start,very unoptimal, main cause of error
+        tour.append(start)
+
+        return tour
+
+
+    def solve(self):
+        mst = self.create_minimum_spanning_tree(self.cities[0])
+        # print(mst)
+        odd_vertices = self.find_odd_verticies_mms(mst)
+        # print(odd_vertices)
+        matching = self.minimum_weight_matching(odd_vertices)
+        # print(matching)
+        multigraph = self.form_multigraph(mst,matching)
+        # print(multigraph)
+        vertices = self.eulerian_tour(multigraph)
+        # print(vertices)
+        tsp = self.generate_tsp(vertices)
+        print(tsp)
+        distance = 0
+        for i in range(len(tsp) - 1):
+            distance += self.distances[(tsp[i],tsp[i + 1])][1]
+        return tsp,distance
+
+
+
+if __name__ == '__main__':
+    cities = [(0, 0), (1, 2), (2, 4), (3, 1)]
+    obstacles = [[(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]]
+    pointcloud = None
+    human_location = (0, 0, 0)
+    step = 1
+    current_buffer = 0
+
+    pathfinder = Christofides(cities, obstacles, pointcloud, human_location, step, current_buffer)
+    print(pathfinder.solve())
+
