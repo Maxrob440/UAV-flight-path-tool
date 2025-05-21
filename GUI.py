@@ -326,6 +326,9 @@ class Gui:
         Solves the TSP problem and generates pictures\n
         '''
         self.check_necessities('solve_tsp')
+        if len(self.driver.cities) >=30:
+            self.add_to_terminal("Too many cities to solve, please reduce the number")
+            return
         self.driver.transect_path=[]
         self.add_to_terminal("Solving TSP")
         self.driver.solve_tsp()
