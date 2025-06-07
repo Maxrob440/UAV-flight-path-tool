@@ -255,15 +255,22 @@ class PointCloud:
             length = int(np.linalg.norm(p1-p2)/interpolation_distance)
             if length < 2:
                 if len(route[i]) == 2:
-                    interpolated_route.append((route[i][0],route[i][1],height))
-                else:
-                    interpolated_route.append((route[i][0],route[i][1],route[i][2]))
+                    p1 =(p1[0],p1[1],self.find_altitude((p1[0],p1[1]),height))
+                    p2 =(p2[0],p2[1],self.find_altitude((p2[0],p2[1]),height))
+                p1=tuple(p1)
+                p2=tuple(p2)
+                if p1 not in interpolated_route:
+                    interpolated_route.append((p1[0],p1[1],p1[2]))
+                if p2 not in interpolated_route:
+                    interpolated_route.append((p2[0],p2[1],p2[2]))
+                continue
             interpolated_x = np.linspace(route[i][0],route[i+1][0],num=length)
             interpolated_y = np.linspace(route[i][1],route[i+1][1],num=length)
             interpolated_z = [self.find_altitude(point,height)
                               for point in zip(interpolated_x,interpolated_y)]
             for j,_ in enumerate(interpolated_x):
-                interpolated_route.append((interpolated_x[j],interpolated_y[j],interpolated_z[j]))
+                if tuple((interpolated_x[j],interpolated_y[j],interpolated_z[j])) not in interpolated_route:
+                    interpolated_route.append((interpolated_x[j],interpolated_y[j],interpolated_z[j]))
 
                 
         if bool_route:
