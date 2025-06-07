@@ -9,6 +9,9 @@ from PIL import Image, ImageTk
 from Config import Config
 from saveoutput import Converter
 
+import matplotlib
+matplotlib.use('Agg')  # Use a non-interactive backend for testing
+
 
 
 
@@ -187,8 +190,10 @@ class Gui:
                 if len(self.driver.transects[point]) ==1: pass
                 else:
                     transect = self.driver.transects[point]
-                    transect_x = transect[0][0], transect[1][0], transect[2][0]
-                    transect_y = transect[0][1], transect[1][1], transect[2][1]
+                    transect_x = [x[0] for x in transect if x[0] is not None and x[1] is not None]
+                    transect_y = [x[1] for x in transect if x[0] is not None and x[1] is not None]
+                    # transect_x = transect[0][0], transect[1][0], transect[2][0]
+                    # transect_y = transect[0][1], transect[1][1], transect[2][1]
                     plt.plot(transect_x, transect_y, 'orange')
 
         if transect_path:
@@ -238,11 +243,12 @@ class Gui:
             threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.best_path_coords)
 
             # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.best_path_coords]
-        for point in threed_coords: #UGLY CODE fixing a bug elsewhere by removing duplicates
-            if point not in seen_interpolated:
-                seen_interpolated.append(point)
+ 
+        # for point in threed_coords: #UGLY CODE fixing a bug elsewhere by removing duplicates
+        #     if point not in seen_interpolated:
+        #         seen_interpolated.append(point)
         saver = Converter(self.driver.folder_path)
-        saver.convert_mercader_to_lat_long(seen_interpolated)
+        saver.convert_mercader_to_lat_long(threed_coords)
         saver.create_bearings()
 
         buffer_id = self.driver.current_buffer
@@ -326,9 +332,6 @@ class Gui:
         Solves the TSP problem and generates pictures\n
         '''
         self.check_necessities('solve_tsp')
-        if len(self.driver.cities) >=30:
-            self.add_to_terminal("Too many cities to solve, please reduce the number")
-            return
         self.driver.transect_path=[]
         self.add_to_terminal("Solving TSP")
         self.driver.solve_tsp()

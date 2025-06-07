@@ -21,9 +21,8 @@ def test_create_bearings():
 
 def test_create_csv():
     config = Config()
-    config.config['io']['output_folder'] = 'TEST_OUTPUT'
-    config.config['io']['specific_folder_name'] = 'Testing_saving_csv'
-    config.save_config()
+    config.update_nested(['io', 'output_folder'], 'TEST_OUTPUT')
+    config.update_nested(['io', 'specific_folder_name'], 'Testing_saving_csv')
 
     converter = Converter("dummy.tif")
     converter.lat_long_coords=[(50.71496966354666, -3.5107196508254517,0,True),(51.49133881869516, -0.18442072115086947,0,False)]
@@ -50,10 +49,9 @@ def test_create_csv():
         
 def test_save_shp():
     config = Config()
-    config.config['io']['output_folder'] = 'TEST_OUTPUT'
-    config.config['io']['specific_folder_name'] = 'Testing_saving_shp'
-    config.config['io']['output_transect_file_name'] = 'test_transects'
-    config.save_config()
+    config.update_nested(['io', 'output_folder'], 'TEST_OUTPUT')
+    config.update_nested(['io', 'specific_folder_name'], 'Testing_saving_shp')
+    config.update_nested(['io', 'output_transect_file_name'], 'test_transects')
 
     converter = Converter("dummy.tif")
     transects = {
@@ -74,9 +72,8 @@ def test_save_shp():
 
 def test_save_dem_shp():
     config = Config()
-    config.config['io']['output_folder'] = 'TEST_OUTPUT'
-    config.config['io']['specific_folder_name'] = 'Testing_copying_dem_shp'
-    config.save_config()
+    config.update_nested(['io', 'output_folder'], 'TEST_OUTPUT')
+    config.update_nested(['io', 'specific_folder_name'], 'Testing_copying_dem_shp')
 
     converter = Converter("dummy.tif")
     folder_path = "tests/test_files/complete_test"

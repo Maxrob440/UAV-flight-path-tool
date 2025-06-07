@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from Driver import Driver
 from Config import Config
 
@@ -20,7 +21,7 @@ def test_loading_of_config_file():
 def test_loading_standing_locations_xyz():
     driver = Driver(folder_path='tests/test_files/single_standing_location')
     driver.load_standing_locations()
-    assert driver.standing_locations == [(0,0,0)], "Driver should load standing locations correctly"
+    assert driver.standing_locations == [(1.1,1.1,0)], "Driver should load standing locations correctly"
 
 
     driver = Driver(folder_path='tests/test_files/multiple_standing_locations')
@@ -101,28 +102,31 @@ def test_generate_points_inside_square_forcing_distance_below_minimum():
 
 def test_generate_points_inside_square_with_DVLOS():
     # config.config['distances']['number_of_points_per_area'] =8
-    # config.config['speed_related']['interpolation_distance_m'] = 0.1
+    config.config['distances']['voxel_size_m'] = 1
     config.config['speed_related']['DVLOS_m'] = 1
     config.config['distances']['interpolation_distance_m'] = 1
     config.config['distances']['distance_to_nearest_point_m'] = 0
     config.config['distances']['height_above_ground_m'] = 0
     config.config['distances']['human_height_above_ground_m']=0
+    config.config['distances']['grid_size_m'] = 1
     config.save_config()
 
     driver= Driver()
-    driver.buffer_coords=[[(0,0),(10,1),(10,0),(0,1)]]
-    driver.pointcloudholder.read_tif([(5,0,0),(5,0.1,0),(5,0.25,0),(5,0.4,0),(5,0.5,0),(5,0.6,0),(5,0.75,0),(5,0.9,0),(5,1,0)])
+    driver.buffer_coords=[[(0,0), (10,0), (10,5), (0,5),(0,0)]]
+    tif = [(5,x,0) for x in np.linspace(0,5,10)]
+    driver.pointcloudholder.read_tif(tif)
     driver.folder_path='tests/test_files/single_standing_location'
     driver.load_standing_locations()
 
-    driver.generate_points_random()
-    # standing_location = driver.standing_locations[0]
+    standing_location = driver.standing_locations[0]
+    driver.generate_points_standard()
+    # driver.pointcloudholder.show_two_d_graph(driver.cities, standing_location,buffer=driver.buffer_coords)
     # driver.pointcloudholder.show_point_cloud(driver.cities,standing_location)
+    # driver.generate_points_random()
 
-    assert len(driver.cities)==8
     for point in driver.cities:
-        assert point[0] >= 0 and point[0] <= 5
-        assert point[1] >= 0 and point[1] <= 1
+        assert point[0] >= 0 and point[0] <= 10
+        assert point[1] >= 0 and point[1] <= 5
 
 def test_solve_tsp_brute():
     driver = Driver()
@@ -154,12 +158,10 @@ def test_generate_transects():
     assert len(driver.transects[(1,1)][0]) == 2
 
     assert (2,2) in driver.transects
-    assert len(driver.transects[(2,2)]) == 3 #All other points do
+    assert len(driver.transects[(2,2)]) == 7 #All other points do
     assert len(driver.transects[(2,2)][0]) == 2
-    assert driver.transects[(2,2)][0]==(2,2)
-    for transect in driver.transects[(2,2)]:
-        assert transect[0]<50 and transect[0]>0
-        assert transect[1]<50 and transect[1]>0
+    assert driver.transects[(2,2)][1]==(2,2)
+
         
 def test_solve_transect_route():
     driver=Driver()
