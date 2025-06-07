@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from Config import Config
-from Pointcloud import PointCloud
+from point_cloud import PointCloud
 
 config = Config()
 
@@ -170,7 +170,7 @@ def test_a_star_no_direct_path():
     assert len(path)>2
 
 def test_a_star_impossible():
-    config.config['speed_related']['maximum_recusive_depth'] = 3
+    config.update_nested(['speed_related','maximum_recusive_depth'], '1')
     obstacles = [[(-1,-1),(-1,1),(1,1),(1,-1)]]
     cities = [(0,0),(0,10)]
     pathfinder = Pathfinder(cities=cities,
@@ -229,9 +229,10 @@ def test_all_points_not_visible_on_interpolated_line():
     cities = [(0,0),(10,0)]
     human_location = (5,5,0)
     empty_obstacles = [[]]
-    config.config['distances']['interpolation_distance_m'] = 1
-    config.config['distances']['height_above_ground_m'] = 0
-    config.save_config()
+    
+    config.update_nested(['speed_related', 'DVLOS_interpolation_m'], '1')
+    config.update_nested(['distances', 'height_above_ground_m'], '0')
+    
     pointcloud = PointCloud('Fake_path')
     pathfinder = Pathfinder(cities=cities,
                              obstacles=empty_obstacles,

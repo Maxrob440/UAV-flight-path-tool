@@ -7,8 +7,8 @@ import math
 from pprint import pprint
 
 from Config import Config
-from Pointcloud import PointCloud
-from pathfinding import Pathfinder,AntColony,BruteForce,Christofides
+from point_cloud import PointCloud
+from pathfinding import Pathfinder,AntColony,BruteForce,Christofides,BnB
 import matplotlib.pyplot as plt
 from shp_file_generator import TransectGenerator
 
@@ -49,6 +49,7 @@ class Driver:
         self.transect_path=[]
         self.current_buffer = 0
         self.current_standing_id = 0
+        self.transect_distance_cache = {}
     
     def load_shp_file(self)->Coordinates:
         '''
@@ -230,7 +231,10 @@ class Driver:
 
         if starting_point is not None:
             points.append(starting_point)
-
+        if not self.standing_locations==[]:
+            standing_location = self.standing_locations[self.current_standing_id]
+            human_height = float(self.config.config['distances']['human_height_above_ground_m'])
+            standing_location_xyz = (standing_location[0],standing_location[1],self.pointcloudholder.find_altitude((standing_location[0],standing_location[1]),human_height))
         for i in range(no_rows):
             for j in range(no_columns):
 
@@ -242,9 +246,6 @@ class Driver:
                 
                 if self.inside_shape(x,y,self.buffer_coords[buffer_id]):
                     if self.standing_locations:
-                        standing_location = self.standing_locations[self.current_standing_id]
-                        human_height = float(self.config.config['distances']['human_height_above_ground_m'])
-                        standing_location_xyz = (standing_location[0],standing_location[1],self.pointcloudholder.find_altitude((standing_location[0],standing_location[1]),human_height))
                         if not self.pointcloudholder.two_points_visible(standing_location_xyz,(x,y,self.pointcloudholder.find_altitude((x,y),uav_height))):
                             continue
                     if points is not None:
@@ -330,13 +331,24 @@ class Driver:
             while True:
                 transect = []
                 random_angle = np.random.uniform(0,2*np.pi)
+                inverse_angle = (random_angle + np.pi)% (2 * np.pi)  # Inverse angle for the transect
+                leading_length = 5
+                leading_point = (point[0] + leading_length*np.cos(inverse_angle),point[1] + leading_length*np.sin(inverse_angle))
+                transect.append(leading_point)
                 transect.append(point)
                 second_point = (point[0] + transect_length*np.cos(random_angle),point[1] + transect_length*np.sin(random_angle))
+                mid_point = ((point[0] + second_point[0]) / 2, (point[1] + second_point[1]) / 2)
+                transect.append(mid_point)
                 transect.append(second_point)
                 angle = random_angle + np.pi / 2 if random.randint(0, 1) == 0 else random_angle - np.pi / 2
-
                 third_point = (second_point[0] + transect_length*np.cos(angle + np.pi),second_point[1] + transect_length*np.sin(angle + np.pi))
+                mid_point2= ((second_point[0] + third_point[0]) / 2, (second_point[1] + third_point[1]) / 2)
+                transect.append(mid_point2)
                 transect.append(third_point)
+                ex_length = leading_length + transect_length
+                leading_point2 = (second_point[0] + ex_length*np.cos(angle + np.pi),second_point[1] + ex_length*np.sin(angle + np.pi))
+                # leading_point2 = (third_point[0] + leading_length*np.cos(angle),third_point[1] + leading_length*np.sin(angle))
+                transect.append(leading_point2)
                 if self.inside_shape(third_point[0],third_point[1],self.buffer_coords[self.current_buffer]) and self.inside_shape(second_point[0],second_point[1],self.buffer_coords[self.current_buffer]):
                     break
             if point in self.cities and point!=self.cities[0]:
@@ -357,13 +369,17 @@ class Driver:
         possible_perms=[[]]
 
         for i in self.best_path_coords:
-            issingle = len(self.transects[i]) == 1
+            transect = self.transects[i]
+            issingle = len(transect) == 1
             if issingle:
  
                 new_possible_perms = [x + [[self.transects[i][0],False]] for x in possible_perms]
             else:
-                new_possible_perms = [x + [[self.transects[i][0],True],[self.transects[i][1],True],[self.transects[i][2],True]] for x in possible_perms]
-                new_possible_perms += [x + [[self.transects[i][2],True],[self.transects[i][1],True],[self.transects[i][0],True]] for x in possible_perms]
+                new_possible_perms= [x +[[coord,True] for coord in transect] for x in possible_perms]
+                new_possible_perms+=[x + [[coord,True] for coord in reversed(transect)] for x in possible_perms]
+                
+                # new_possible_perms = [x + [[self.transects[i][0],True],[self.transects[i][1],True],[self.transects[i][2],True]] for x in possible_perms]
+                # new_possible_perms += [x + [[self.transects[i][2],True],[self.transects[i][1],True],[self.transects[i][0],True]] for x in possible_perms]
             possible_perms = new_possible_perms
         routes = []
         #Compare the length of each possible path
@@ -372,10 +388,10 @@ class Driver:
             length = self.route_length(path)
             routes.append((path,length))
 
-        sorted_routes = sorted(routes, key=lambda x: x[1], reverse=False)
 
 
-        shortest_path = sorted_routes[0][0]
+        shortest_path = min(routes, key=lambda x: x[1])[0]
+
         #Adds to the transect path
         self.transect_path=shortest_path
         camera_path = []
@@ -394,12 +410,12 @@ class Driver:
         """
         total_distance = 0.0
         for i in range(len(route) - 1):
-            
-            x1, y1 = route[i][0]
-            x2, y2 = route[i + 1][0]
-            total_distance += math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)  # Euclidean distance
-        
+            total_distance += math.dist(route[i][0], route[i + 1][0])
+
         return total_distance
+    
+
+        
 
     def solve_tsp(self)->None:
         '''
@@ -416,9 +432,8 @@ class Driver:
             pathfinder = BruteForce(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
         else:
             pathfinder = AntColony(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
-            approx_pathfinder = Christofides(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer)
-
-        
+            distances = pathfinder.distances
+            approx_pathfinder = Christofides(self.cities,self.buffer_coords,self.pointcloudholder,standing_location,a_star_step,self.current_buffer,distances)
         print('Starting TSP solver...')
         path,distance = pathfinder.solve()
         if approx_pathfinder:
@@ -426,8 +441,6 @@ class Driver:
             if approx_distance< distance:
                 path = approx_path
                 print('Christofides is shorter than antcolony, using Christofides')
-                # raise RuntimeError('Christofides is shorter than antcolony, adjust ant colony settings')
-
 
         self.best_path_coords = path
         self.best_path_coords_interpolated = self.pointcloudholder.interpolate_route(path)
@@ -445,9 +458,16 @@ if __name__ == "__main__":
 
     driver.pointcloudholder.read_tif()
     driver.solve_tsp()
-    driver.pointcloudholder.show_point_cloud(
-        cities=driver.cities,
-        dvlos = True,
-        best_path_coords=driver.best_path_coords_interpolated)
+    driver.create_transects(driver.best_path_coords)
+    driver.solve_transect_route()
+    driver.pointcloudholder.show_two_d_graph(
+        transects=driver.transects
+        # transect_path=driver.transect_path
+        
+    )
+    # driver.pointcloudholder.show_point_cloud(
+    #     cities=driver.cities,
+    #     dvlos = True,
+    #     best_path_coords=driver.best_path_coords_interpolated)
 
     

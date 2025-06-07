@@ -1,9 +1,16 @@
+'''
+All implementations of pathfinding algorithms.
+'''
+
 from itertools import permutations
+import math
+import time
 import random
 import heapq
 import numpy as np
 import matplotlib.pyplot as plt
 from Config import Config
+import math
 
 XYCoordinate = tuple[float, float]
 XYCoordinates = list[XYCoordinate]
@@ -15,27 +22,29 @@ PathDistance = tuple[XYCoordinates, float]
 class Node:
     '''
     Holds the coordinates of the node and the coordinates of the neighbours.\n
-    The neighbours are stored in a dictionary with the direction as the key and a list containing the neighbours coordinates and the distance to the neighbour as the value. [(x,y),distance]\n
+    The neighbours are stored in a dictionary with the direction as the key and a list containing the neighbours coordinates 
+    and the distance to the neighbour as the value. [(x,y),distance]\n
     The distance is calculated using the calculate_node_distances method.\n
-    nearest_important_point is the a list of the nearest city to the node and the distance to the city.[(x,y),distance]\n
+    nearest_important_point is the a list of the nearest city to the node 
+    and the distance to the city.[(x,y),distance]\n
     '''
     def __init__(self,
                  pathfinder:object,
                   coord:XYCoordinate,
                   step:float,
                   nearest_points=None)->None:
-        
+
         if not isinstance(coord,(tuple,list)):
             raise TypeError("Expected a tuple or list for coordinate")
         if len(coord) != 2:
             raise ValueError("Coord expected to be in (X,Y) form")
-        
+
         if not isinstance(step,(float,int)) or step <= 0:
             raise ValueError('Step should be a positive number greater than 0')
 
 
         x,y= coord
-                
+
         self.neighbours={
                     'left':[(x - step, y), None],
                     'right':[(x + step, y), None],
@@ -67,7 +76,8 @@ class Node:
     def calculate_node_distances(self)->None:
         '''
         Calculates the 2D distances to each neighbour stored in the nodes dictionary.
-        If the line between the node and the neighbour crosses an obstacle, the distance is set to np.inf.
+        If the line between the node and the neighbour crosses an obstacle,
+          the distance is set to np.inf.
         '''
         for neighbour in self.neighbours.items():
             # if neighbour[0] == 'nearest_important_point':
@@ -81,7 +91,7 @@ class Node:
                 self.neighbours[direction][1] = np.inf
             
             elif direction[0] is not None:
-                self.neighbours[direction][1] = np.linalg.norm(np.array(self.coord)-np.array(coordinate))
+                self.neighbours[direction][1] = math.dist(self.coord, coordinate)
         
 
 class Pathfinder():
@@ -94,7 +104,8 @@ class Pathfinder():
                  pointcloud,
                  human_location:XYZCoordinate,
                  step:float,
-                 current_buffer)->None:
+                 current_buffer,
+                 distances = None)->None:
         self.config = Config()
         self.cities = cities
         self.obstacles = obstacles
@@ -104,8 +115,12 @@ class Pathfinder():
         self.grid_distances = []
         self.current_buffer = current_buffer
         self.line_crossing_cache={}
-
-        self.distances = self.calculate_distances(step)
+        self.grid_cache = {}
+        self.step = step
+        if distances is not None:
+            self.distances = distances
+        else:
+            self.distances = self.calculate_distances(step)
         self.dijkstras_extra_points = []
         self.grid_points = []
         self.best_path = None
@@ -130,7 +145,7 @@ class Pathfinder():
             total_path.append(current)
         optimum_path_distance = 0
         for i in range(len(total_path)-1):
-            optimum_path_distance += np.linalg.norm(np.array(total_path[i])-np.array(total_path[i+1]))
+            optimum_path_distance += math.dist(total_path[i],total_path[i+1])
         #Path is reconstructed in reverse order, so we need to reverse it again.
         total_path.reverse()
         return total_path,optimum_path_distance
@@ -144,11 +159,11 @@ class Pathfinder():
         Ignoring all obstacles and line of sight restrictions.\n
         '''
         if isinstance(node,Node) and isinstance(goal,Node):
-            return np.linalg.norm(np.array(node.coord)-np.array(goal.coord))
+            return math.dist(node.coord,goal.coord)
         elif isinstance(node,(tuple,list)) and isinstance(goal,(tuple,list)):
             if len(node) != 2 or len(goal) != 2:
                 raise TypeError("Coord expected to be in (X,Y) form")
-            return np.linalg.norm(np.array(node)-np.array(goal))
+            return math.dist(node,goal)
         else:
             raise TypeError(f"Expected a Node or tuple for coordinates, both of same type, got {type(node)} and {type(goal)}")
     
@@ -173,9 +188,10 @@ class Pathfinder():
             raise TypeError(f"Expected a tuple for coordinates, got {type(start)}")
         
         if self.obstacles == [[]]: # if no obstacles return the euclidean route
-            return [start,goal],np.linalg.norm(np.array(start)-np.array(goal))
+            return [start,goal],math.dist(start,goal)
         if not self.line_crosses_polygon(start,goal,self.obstacles[self.current_buffer]): # if doesnt cross any obstacles return euclidean route
-            return [start,goal],np.linalg.norm(np.array(start)-np.array(goal))
+            return [start,goal],math.dist(start,goal)
+
 
 
         if self.grid_distances== [] or recusive_depth > 0:
@@ -189,20 +205,20 @@ class Pathfinder():
 
 
 
-        open_set = {start.coord}
-
         came_from = {}
         g_score = {node.coord: np.inf for node in self.grid_distances.values()}
         g_score[start.coord] = 0
         f_score = {node.coord: np.inf for node in self.grid_distances.values()}
         f_score[start.coord] = self.h(start,goal)
 
-        while open_set:
-            current = min(open_set, key=lambda o: f_score[o])
+        open_heap = []
+        heapq.heappush(open_heap, (f_score[start.coord], start.coord))
+
+        while open_heap:
+            _, current = heapq.heappop(open_heap)
 
             if current == goal.coord:
                 return self.reconstruct_path(came_from,current)
-            open_set.remove(current)
 
             current_node = self.grid_distances[current]
             all_options = [x for x in current_node.neighbours.values()]
@@ -215,30 +231,27 @@ class Pathfinder():
                         came_from[direction[0]] = current
                         g_score[direction[0]] = tentative_g_score
                         f_score[direction[0]] = g_score[direction[0]] + self.h(self.grid_distances[direction[0]],goal)
-                        if direction[0] not in open_set:
-                            open_set.add(direction[0])
-        growth_multiplier = int(self.config.config['speed_related']['A*_grid_growth_multiplier'])
+                        heapq.heappush(open_heap, (f_score[direction[0]], direction[0]))
+
         maximum_recursive_depth = int(self.config.config['speed_related']['maximum_recusive_depth'])
         if self.number_of_times_grid_generated < maximum_recursive_depth:
             return self.a_star(start.coord,goal.coord,self.number_of_times_grid_generated,step,recusive_depth=recusive_depth+1)
 
         else:
             print('A STAR FAILED')
-            debug = False
-            if debug: #Debugging to show the grid to allow for debugging of the A* algorithm.
-                for obstacle in self.obstacles:
-                    x= [point[0] for point in obstacle]
-                    y= [point[1] for point in obstacle]
-                    plt.plot(x,y,c='r')
-                plt.scatter(start.coord[0],start.coord[1],c='y',marker='o')
-                plt.scatter(goal.coord[0],goal.coord[1],c='y',marker='o')
-                x= [point[0] for point in self.cities]
-                y= [point[1] for point in self.cities]
-                plt.scatter(x,y,c='g',marker='o')
-                x= [point[0] for point in self.grid_distances]
-                y= [point[1] for point in self.grid_distances]
-                plt.scatter(x,y,c='b', marker='o', s=1)
-                plt.show()
+            #     for obstacle in self.obstacles:
+            #         x= [point[0] for point in obstacle]
+            #         y= [point[1] for point in obstacle]
+            #         plt.plot(x,y,c='r')
+            #     plt.scatter(start.coord[0],start.coord[1],c='y',marker='o')
+            #     plt.scatter(goal.coord[0],goal.coord[1],c='y',marker='o')
+            #     x= [point[0] for point in self.cities]
+            #     y= [point[1] for point in self.cities]
+            #     plt.scatter(x,y,c='g',marker='o')
+            #     x= [point[0] for point in self.grid_distances]
+            #     y= [point[1] for point in self.grid_distances]
+            #     plt.scatter(x,y,c='b', marker='o', s=1)
+            #     plt.show()
             return [],np.inf
             
 
@@ -255,7 +268,7 @@ class Pathfinder():
                                                  for obstacle in self.obstacles):
                     nearest.append((np.inf,city))
                 else:
-                    nearest.append((np.linalg.norm(np.array(node.coord)-np.array(city)),city))
+                    nearest.append((math.dist(node.coord, city), city))
             nearest.sort(key=lambda x: x[0])
             node.neighbours['nearest_important_point'] = [nearest[0][1],nearest[0][0]]
 
@@ -291,7 +304,7 @@ class Pathfinder():
             nearest = {}
             for items in candidates.items():
                 if len(items[1]) > 0:
-                    nearest[items[0]]=min(items[1], key=lambda x: np.linalg.norm(np.array(x) - np.array(point)))
+                    nearest[items[0]]=min(items[1], key=lambda x: math.dist(x, point))
             return nearest
 
         # shgould never be called from anythign but the a_star function so this code shouldnt be accessed
@@ -349,7 +362,6 @@ class Pathfinder():
         otherwise the distance is calculated using the euclidean distance.\n
         The distances are stored in a dictionary with the cities as the key (start,end) and the distance as the value.\n
         '''
-        print('Calculating distances...')
         distances= {}
         n = len(self.cities)
         for i in range(n):
@@ -365,7 +377,7 @@ class Pathfinder():
                         continue
                 # elif not self.all_points_visible_interpolated_line(start,end):
                 #     distances[(start,end)] = self.a_star(start,end,adjustment=1)
-                distances[(start,end)] = [[start,end],np.linalg.norm(np.array(start) - np.array(end))]
+                distances[(start,end)] = [[start,end],math.dist(start,end)]
         return distances
 
     def all_points_visible_interpolated_line(self,
@@ -496,13 +508,14 @@ class AntColony(Pathfinder):
         self.evaporation = evaporation
         self.q = q
         self.pheromones = {
-            (a, b): 1 for a in cities for b in cities if a != b
-        }
+            frozenset((a, b)): 1 for a in cities for b in cities if a != b
+            }
 
 
     def probability(self, current, unvisited):
         pheromones = np.array([
-            self.pheromones[(current, city)] ** self.alpha for city in unvisited
+            self.pheromones[frozenset((current, city))] ** self.alpha
+         for city in unvisited
         ])
         distances = np.array([
             (1 / self.distances[(current, city)][1]) ** self.beta for city in unvisited
@@ -515,6 +528,12 @@ class AntColony(Pathfinder):
 
     def solve(self):
         print('Solving TSP with Ant Colony Optimization...')
+        
+        last_best_distance = float('inf')
+        stagnant_iterations = 0
+        patience = 5
+
+
         cities = self.cities
         for _ in range(self.n_iterations):
             all_paths = []
@@ -547,10 +566,18 @@ class AntColony(Pathfinder):
 
             # Evaporate and update pheromones
             for key in self.pheromones:
-                self.pheromones[key] *= (1 - self.evaporation)
+                self.pheromones[frozenset(key)] *= (1 - self.evaporation)
+
             for path, dist in zip(all_paths, all_distances):
                 for i in range(len(path) - 1):
-                    self.pheromones[(path[i], path[i + 1])] += self.q / dist
+                    self.pheromones[frozenset((path[i], path[i+1]))] += self.q / dist
+            if abs(last_best_distance - self.best_distance) < 1e-6:
+                stagnant_iterations += 1
+                if stagnant_iterations >= patience:
+                    break
+            else:
+                stagnant_iterations = 0
+            last_best_distance = self.best_distance
 
         # Expand best path into waypoints using pathfinding
         path_fillers = []
@@ -578,7 +605,6 @@ class BruteForce(Pathfinder):
                   current_buffer:int
                   )->None:
         super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer)
-
 
     def solve(self)->tuple[XYCoordinates,float]:
         print('Solving TSP with brute force...')
@@ -615,8 +641,9 @@ class Christofides(Pathfinder):
                   pointcloud:object,
                   human_location:XYZCoordinate,
                   step:float,
-                  current_buffer:int):
-        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer)
+                  current_buffer:int,
+                  distances = None)->None:
+        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer,distances=distances)
 
     def create_minimum_spanning_tree(self,
                                      start:tuple)->list[tuple[XYCoordinate,XYCoordinate]]:
@@ -750,22 +777,88 @@ class Christofides(Pathfinder):
         vertices = self.eulerian_tour(multigraph)
         # print(vertices)
         tsp = self.generate_tsp(vertices)
-        print(tsp)
         distance = 0
         for i in range(len(tsp) - 1):
             distance += self.distances[(tsp[i],tsp[i + 1])][1]
-        return tsp,distance
+        
+        path_fillers = []
+        for point in tsp:
+            if not path_fillers:
+                path_fillers.append(point)
+                continue
+            path_between = self.distances[(path_fillers[-1], point)][0]
+            path_fillers.extend(path_between[1:])  # skip first point to avoid duplication
+
+        return path_fillers,distance
+
+class BnB(Pathfinder):
+    '''
+    Branch and Bound algorithm for solving the TSP exactly.\n
+    Starts by using the christofides algorithm to find an initial solution.\n
+    Then uses the branch and bound algorithm to find the optimal solution.\n
+    '''
+    def __init__(self, cities:XYCoordinates,
+                 obstacles:list[XYCoordinates],
+                 pointcloud:object,
+                 human_location:XYZCoordinate,
+                 step:float,
+                 current_buffer:int)->None:
+        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer)
+   
+    
+
+    def solve(self):
+        christofides = Christofides(self.cities,
+                                 self.obstacles,
+                                 self.pointcloud,
+                                 self.human_location,
+                                 self.step,
+                                 self.current_buffer,
+                                 distances=self.distances)
+        christofides_path, christofides_distance = christofides.solve()
+        start = self.cities[0]
+    
+        # Priority queue holds tuples: (total_distance, path)
+        pq = [(0, [start])]
+        best_distance = christofides_distance
+        best_path = christofides_path
+
+        while pq:
+            distance_so_far, current_path = heapq.heappop(pq)
+            current_city = current_path[-1]
+
+            if len(current_path) == len(self.cities):
+                # Complete the tour by returning to start
+                return_distance = self.distances[(current_city, start)][1]
+                total_distance = distance_so_far + return_distance
+                if total_distance < best_distance:
+                    best_distance = total_distance
+                    best_path = current_path + [start]
+                continue
+
+            for city in self.cities:
+                if city not in current_path:
+                    new_path = current_path + [city]
+                    new_distance = distance_so_far + self.distances[(current_city, city)][1]
+                    if new_distance < best_distance:
+                        heapq.heappush(pq, (new_distance, new_path))    
+
+        self.best_distance = best_distance
+        self.best_path = best_path
+        print(f"Best path found: {self.best_path} with distance {self.best_distance}")
+        return self.best_path, self.best_distance
 
 
 
 if __name__ == '__main__':
     cities = [(0, 0), (1, 2), (2, 4), (3, 1)]
-    obstacles = [[(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)]]
+    obstacles = [[]]
     pointcloud = None
     human_location = (0, 0, 0)
-    step = 1
     current_buffer = 0
 
-    pathfinder = Christofides(cities, obstacles, pointcloud, human_location, step, current_buffer)
-    print(pathfinder.solve())
+    pathfinder = BnB(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    path, distance = pathfinder.solve()
+    print("Path:", path)
+    print("Distance:", distance)
 

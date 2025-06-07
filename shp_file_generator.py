@@ -35,9 +35,32 @@ class TransectGenerator(ShapefileGenerator):
         """
         Add a transect to the list of transects to be saved.
         """
-        print(transect)
         tlinestring = LineString(transect)
         self.to_add.append(tlinestring)
+        
+    def save(self):
+
+        buffered_geometries = []
+        for tlinestring in self.to_add:
+            gdf_line = gpd.GeoDataFrame(geometry=[tlinestring], crs="EPSG:27700")
+            buffered_line = gdf_line.geometry.buffer(1) # Magic number for buffer, adjust as needed
+            buffered_geometries.append(buffered_line.iloc[0])
+        gdf_buffered = gpd.GeoDataFrame(geometry=buffered_geometries, crs="EPSG:27700")
+        
+        
+        output_folder = self.config.config['io']['output_folder']
+        specific_folder = self.config.config['io']['specific_folder_name']
+        transect_file_name = self.config.config['io']['output_transect_file_name']
+        output_path = os.path.join(output_folder, specific_folder)
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        file_path = os.path.join(output_path, transect_file_name)
+        file_path = file_path+f'_{self.flight_no}_Buffers.shp'
+        
+        
+        gdf_buffered.to_file(file_path)
+
+        super().save()
 
 if __name__ == "__main__":
     transect_gen = TransectGenerator(0)

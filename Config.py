@@ -54,7 +54,8 @@ class Config:
                     "interpolation_distance_m": "10",
                     "number_of_points_per_area": "8",
                     "human_height_above_ground_m":"4",
-                    "grid_size_m":"100"
+                    "grid_size_m":"100",
+                    "voxel_size_m":"10",
             },
 
             "current_map":{
@@ -65,6 +66,7 @@ class Config:
                 "A*_grid_size_m": "40",
                 "A*_grid_growth_multiplier": "10",
                 "DVLOS_m": "1",
+                "DVLOS_interpolation_m": "10",
                 "brute_force_cutoff": "8",
                 "maximum_recusive_depth": "3",
                 },
@@ -90,9 +92,22 @@ class Config:
         self.config=default_config
         self.save_config()
         self.load_config()
+    
+    def update_nested(self, keys, value):
+        '''
+        Updates a nested config key given a list of keys and a value.
+        '''
+        d = self.config
+        for key in keys[:-1]:
+            d = d.setdefault(key, {})
+        d[keys[-1]] = value
+        
+        self.save_config()
 
 
 if __name__== "__main__":
     configer = Config()
     # print(configer.load_config())
     configer.set_default()
+    configer.update_nested(['distances', 'buffer_m'], '-20')
+    print(configer.config)

@@ -4,6 +4,10 @@ from Config import Config
 import os
 from unittest.mock import patch
 
+import matplotlib
+
+matplotlib.use('Agg')  # Use a non-interactive backend for testing
+
 def test_gui_initialization():
     gui = Gui()
     assert gui is not None
@@ -89,13 +93,17 @@ def test_load_load_shape_file_not_found():
 @patch('open3d.visualization.draw_geometries')
 def test_integration_correct_orders(mock_draw_geometries):
     gui=Gui()
-    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
-    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
-    gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
-    gui.config.config['distances']['grid_size_m'] = 20
+    gui.config.update_nested(['distances', 'voxel_size_m'], 1)
+    gui.config.update_nested(['current_map', 'folder_location'], 'tests/test_files/complete_test')
+    gui.config.update_nested(['distances', 'buffer_m'], 5) # Default is 30 which for shape file is too much
+    gui.config.update_nested(['distances', 'distance_to_nearest_point_m'], 0.1)
+    gui.config.update_nested(['distances', 'grid_size_m'], 20)
+    gui.config.update_nested(['speed_related', 'DVLOS_interpolation_m'], 10)
+    gui.config.update_nested(['distances','height_above_ground_m'],5)
+    gui.config.update_nested(['distances','transect_length_m'],2)
+    gui.config.update_nested(['distances','interpolation_distance_m'],1)
     
-
-    gui.config.save_config()
+    
     gui.load_shapefile()
     gui.generate_points()
     gui.solve_tsp()
@@ -113,12 +121,13 @@ def test_integration_correct_orders(mock_draw_geometries):
 @patch('open3d.visualization.draw_geometries')
 def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
     gui = Gui()
-    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
-    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
-    gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
-    gui.config.config['distances']['grid_size_m'] = 20
-
-    gui.config.save_config()
+    gui.config.update_nested(['distances', 'voxel_size_m'], 0.1)
+    gui.config.update_nested(['current_map', 'folder_location'], 'tests/test_files/complete_test')
+    gui.config.update_nested(['distances', 'buffer_m'], 5) # Default is 30 which for shape file is too much
+    gui.config.update_nested(['distances', 'distance_to_nearest_point_m'], 0.1)
+    gui.config.update_nested(['distances', 'grid_size_m'], 20)
+    
+    
     gui.load_shapefile()
     gui.generate_points()
     gui.solve_tsp()
@@ -127,12 +136,20 @@ def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
 
 def test_save_output_of_just_TSP_path():
     gui = Gui()
-    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
-    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
-    gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
-    gui.config.config['distances']['grid_size_m'] = 20
+    gui.config.update_nested(['distances', 'voxel_size_m'], 0.1)
+    gui.config.update_nested(['current_map', 'folder_location'], 'tests/test_files/complete_test')
+    gui.config.update_nested(['distances', 'buffer_m'], 5) # Default is 30 which for shape file is too much
+    gui.config.update_nested(['distances', 'distance_to_nearest_point_m'], 0.1)
+    gui.config.update_nested(['distances', 'grid_size_m'], 20)
+    
+    
+    # gui.config.config['distances']['voxel_size_m'] = 0.1
+    # gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    # gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
+    # gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
+    # gui.config.config['distances']['grid_size_m'] = 20
 
-    gui.config.save_config()
+    # gui.config.save_config()
     gui.load_shapefile()
     gui.generate_points()
     gui.solve_tsp()
@@ -144,6 +161,7 @@ def test_save_output_of_just_TSP_path():
 def test_transect_generation_after_viewing_threed(mock_draw_geometries):
     gui= Gui()
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['voxel_size_m'] = 0.1
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
     gui.config.config['distances']['grid_size_m'] = 20
@@ -160,6 +178,7 @@ def test_transect_generation_after_viewing_threed(mock_draw_geometries):
 def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_geometries):
     gui= Gui()
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['voxel_size_m'] = 0.1
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
     gui.config.config['distances']['grid_size_m'] = 20
@@ -177,6 +196,7 @@ def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_
 def test_loading_standing_locations():
     gui = Gui()
     gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
+    gui.config.config['distances']['voxel_size_m'] = 0.1
     gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
     gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
     gui.config.save_config()
