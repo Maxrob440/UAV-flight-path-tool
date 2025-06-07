@@ -62,6 +62,8 @@ class Driver:
         output_folder_name = possible_files[0].split('.')[0]
         output_folder_name = output_folder_name.split('_bdy')[0]
         self.config.config['io']['specific_folder_name'] = output_folder_name
+        self.config.config['io']['output_transect_file_name'] = f"{output_folder_name}_transects"
+        self.config.config['io']['output_CSV_file_name'] = f"{output_folder_name}_path_"
         self.config.save_config()
 
         shp_file = os.path.join(self.folder_path, possible_files[0])
