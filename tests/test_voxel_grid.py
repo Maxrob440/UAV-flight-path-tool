@@ -65,6 +65,19 @@ def test_voxel_grid_empty():
     result = voxel_grid.safe_query((5, 5, 5))
     assert result == [], "Safe query on an empty grid should return an empty list."
 
+def test_voxel_grid_small_voxel_size():
+    voxel_grid = VoxelGrid((0, 0, 0), 0.5)
+    voxel_grid.insert((0.25, 0.25, 0.25))
+    result = voxel_grid.safe_query((0.25, 0.25, 0.25))
+    assert result == [(0.25, 0.25, 0.25)], "Safe query should return the point within a small voxel size."
+    result = voxel_grid.safe_query((0.75, 0.75, 0.75))
+    assert result == [(0.25, 0.25, 0.25)]
+
+def test_index_with_decimal_size():
+    voxel_grid = VoxelGrid((0, 0, 0), 0.5)
+    index = voxel_grid.get_voxel_index((2,0,0))
+    assert index == (4, 0, 0), "Voxel index should be (4, 0, 0) for point (2, 0, 0) with voxel size 0.5."
+
 def test_voxel_grid_error_checking_index():
     voxel_grid = VoxelGrid((0, 0, 0), 10)
     with pytest.raises(ValueError):

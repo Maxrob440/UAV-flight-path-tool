@@ -23,12 +23,13 @@ def test_create_csv():
     config = Config()
     config.update_nested(['io', 'output_folder'], 'TEST_OUTPUT')
     config.update_nested(['io', 'specific_folder_name'], 'Testing_saving_csv')
+    config.update_nested(['io', 'output_CSV_file_name'], 'test_square_path_')
 
     converter = Converter("dummy.tif")
     converter.lat_long_coords=[(50.71496966354666, -3.5107196508254517,0,True),(51.49133881869516, -0.18442072115086947,0,False)]
     converter.bearings=[68,0]
-    converter.create_csv("1")
-    df = pd.read_csv("TEST_OUTPUT/Testing_saving_csv/test_square_path_1.csv")
+    converter.create_csv("1",'1')
+    df = pd.read_csv("TEST_OUTPUT/Testing_saving_csv/test_square_path_1_1.csv")
     assert len(df) == 2
     assert df.iloc[0]['latitude'] == 50.71496966354666
     assert round(df.iloc[0]['longitude'],5) == round(-3.5107196508254517,5)
@@ -54,11 +55,11 @@ def test_save_shp():
     config.update_nested(['io', 'output_transect_file_name'], 'test_transects')
 
     converter = Converter("dummy.tif")
-    transects = {
+    transects = [{
         '(0,0)': [(0,0),(1,1),(2,1)],
         '(1,1)': [(1,1),(2,2),(3,3)],
-    }
-    converter.save_transects(transects,'1')
+    }]
+    converter.save_transects(transects,'1',0)
 
     assert os.path.exists("TEST_OUTPUT/Testing_saving_shp/test_transects_1.shp")
 

@@ -65,7 +65,7 @@ class Converter:
     
 
 
-    def create_csv(self,flight_no):
+    def create_csv(self,flight_no,current_cluster):
         '''
         Transforms the route data into a csv file that can be read by flylichi
         if the point is a part of the transets then the speed is 0.8 m/s and the photo interval is 2 seconds
@@ -86,7 +86,7 @@ class Converter:
         
         output_folder = self.config.config['io']['output_folder']
         specific_folder = self.config.config['io']['specific_folder_name']
-        csv_path = self.config.config['io']['output_CSV_file_name'] + f'{flight_no}.csv'
+        csv_path = self.config.config['io']['output_CSV_file_name'] + f'{flight_no}_{current_cluster}.csv'
         output_path = os.path.join(output_folder, specific_folder)
         csv_path = os.path.join(output_path, csv_path)
         if not os.path.exists(output_path):
@@ -95,9 +95,9 @@ class Converter:
         
         df.to_csv(csv_path, index=False)
 
-    def save_transects(self,transects,flight_no):
+    def save_transects(self,transects,flight_no,current_cluster):
         trans_generator = TransectGenerator(flight_no)
-        for transect in transects.values():
+        for transect in transects[current_cluster].values():
             if len(transect) == 1:
                 continue
             trans_generator.add_transect(transect)
@@ -125,9 +125,9 @@ class Converter:
 
 
 
-    def save_all(self,flight_no,transects,folder_path):
-        self.create_csv(flight_no)
-        self.save_transects(transects,flight_no)
+    def save_all(self,flight_no,transects,folder_path,current_cluster):
+        self.create_csv(flight_no,current_cluster)
+        self.save_transects(transects,flight_no,current_cluster)
         self.save_dem_shp(folder_path)
 
         

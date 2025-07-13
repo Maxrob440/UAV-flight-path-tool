@@ -46,29 +46,98 @@ class Config:
         '''
         default_config = {
                 "distances":{
-                    "buffer_m": "-30",
-                    "distance_to_nearest_point_m": "40",
-                    "attempts_to_find_point_in_area": "1000",
-                    "height_above_ground_m": "25",
-                    "transect_length_m": "25",
-                    "interpolation_distance_m": "10",
-                    "number_of_points_per_area": "8",
-                    "human_height_above_ground_m":"4",
-                    "grid_size_m":"100",
+                    "buffer_m": {
+                        "type":"scale",
+                        "default_value": "-20",
+                        "min_value": "-100",
+                        "max_value":"0",
+                    },
+
+                    "height_above_ground_m": {
+                        "type":"scale",
+                        "default_value":"25",
+                        "min_value":"0",
+                        "max_value":"100"
+                    },
+                    "transect_length_m": {
+                        "type":"scale",
+                        "default_value":"25",
+                        "min_value":"0",
+                        "max_value":"100"
+                    },
+                    "interpolation_distance_m": {
+                        "type":"scale",
+                        "default_value":"10",
+                        "min_value":"0",
+                        "max_value":"100"
+                    },
+                   
+                    "human_height_above_ground_m":{
+                        "type":"scale",
+                        "default_value":"1.8",
+                        "min_value":"0",
+                        "max_value":"10"
+                    },
                     "voxel_size_m":"10",
+            },
+            "random_point_generation":{
+                "number_of_points_per_area": {
+                        "type":"combobox",
+                        "default_value":"8",
+                        "values":[8,16]
+                    },
+                "distance_to_nearest_point_m": {
+                    "type":"scale",
+                    "default_value": "40",
+                    "min_value": "0",
+                    "max_value":"100",
+                    },
+                "attempts_to_find_point_in_area": {
+                    'type':'hidden',
+                    'default_value':1000
+                    }
+            },
+            "hexagonal_grid_generation":{
+                    "grid_size_m":{
+                        "type":"scale",
+                        "default_value":"100",
+                        "min_value":"1",
+                        "max_value":"400"
+                    }
             },
 
             "current_map":{
-                "folder_location": "",
+                "folder_location":  "/Users/maxrobertson/Documents/GitHub/UAV_flight_path/Data/MGAT_01201/Base_Data",
                 "human_location":""
             },
             "speed_related":{
-                "A*_grid_size_m": "40",
-                "A*_grid_growth_multiplier": "10",
-                "DVLOS_m": "1",
-                "DVLOS_interpolation_m": "10",
-                "brute_force_cutoff": "8",
-                "maximum_recusive_depth": "3",
+                "A*_grid_size_m": {
+                    "type":"scale",
+                    "default_value": "40",
+                    "min_value": "5",
+                    "max_value": "200"
+                },
+                # "A*_grid_growth_multiplier": "10",
+                "DVLOS_m": {
+                    "type":"scale",
+                    "default_value": "1",
+                    "min_value": "0",
+                    "max_value": "4"
+                },
+                "DVLOS_interpolation_m": {
+                  "type": "scale",
+                    "default_value": "10",
+                    "min_value": "1",
+                    "max_value": "100"  
+                },
+                "brute_force_cutoff":{
+                    "type":"hidden",
+                    "default_value":8
+                },
+                "maximum_recusive_depth": {
+                    'type':'hidden',
+                    'default_value':"3"
+                    }
                 },
             "io":{
                 "output_folder": "OUTPUT",
@@ -79,15 +148,58 @@ class Config:
                 "output_transect_file_name":"transects"
 
                 },
-            "ant_colony":{
-                "number_of_ants": "10",
-                "number_of_iterations": "100",
-                "pheromone_evaporation_rate": "0.5",
-                "pheromone_deposit_amount": "1.0",
-                "pheromone_weight": "1.0",
-                "distance_weight": "1.0",
-                "visibility_weight": "1.0"
+            'point_creation':{
+                'random_point_generation':{
+                    'type':'checkbutton',
+                    'default_value':False
+                },
+                'flyable_areas':{
+                    'type':'checkbutton',
+                    'default_value':False}
             },
+            "ant_colony":{
+                "number_of_ants": {
+                    'type':'hidden',
+                    'default_value':10
+                },
+                "number_of_iterations": {
+                    'type':'hidden',
+                    'default_value':100
+                },
+                "pheromone_evaporation_rate": {
+                    'type':'hidden',
+                    'default_value':0.5
+                },
+                "pheromone_deposit_amount": {
+                    'type':'hidden',
+                    'default_value': 1.0
+                },
+                "pheromone_weight": {
+                    'type':'hidden',
+                    'default_value':1
+                },
+                "distance_weight": {
+                    'type':'hidden',
+                    'default_value':1
+                },
+                "visibility_weight": {
+                    'type':'hidden',
+                    'default_value':1
+                }
+            },
+            "clustering":{
+                "clustering_method": {
+                    'type':'combobox',
+                    'default_value':"TSP",
+                    'values' : ['TSP']
+                },
+                "points_per_cluster":{
+                    'type':'scale',
+                    'default_value':'8',
+                    'min_value':'1',
+                    'max_value':'20'
+                }
+            }
         }
         self.config=default_config
         self.save_config()
@@ -97,17 +209,35 @@ class Config:
         '''
         Updates a nested config key given a list of keys and a value.
         '''
+        keys.append('value')
         d = self.config
         for key in keys[:-1]:
             d = d.setdefault(key, {})
-        d[keys[-1]] = value
+        try:
+            d[keys[-1]] = value
+        except TypeError:
+            keys.pop()
+            d= self.config
+            for key in keys[:-1]:
+                d = d.setdefault(key, {})
+            d[keys[-1]] = value
+
         
         self.save_config()
-
+    
+    def get_nested(self,key1,key2):
+        value = self.config[key1][key2]
+        if isinstance(value,dict):
+            try:
+                return self.config[key1][key2]['value']
+            except KeyError:
+                return self.config[key1][key2]['default_value']
+        elif isinstance(value,(str,int)):
+            return value
 
 if __name__== "__main__":
     configer = Config()
     # print(configer.load_config())
     configer.set_default()
-    configer.update_nested(['distances', 'buffer_m'], '-20')
+    configer.update_nested(['distances', 'buffer_m'], '-50')
     print(configer.config)

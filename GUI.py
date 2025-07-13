@@ -1,27 +1,29 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
+from tkinter import font
 import os
 import tkinter as tk
-from Driver import Driver
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
+import matplotlib
+import matplotlib.pyplot as plt
+
+from Driver import Driver
 from Config import Config
 from saveoutput import Converter
+from widget_factory import WidgetFactory
 
-import matplotlib
 matplotlib.use('Agg')  # Use a non-interactive backend for testing
-
-
 
 
 class Gui:
     '''
-    This class creates a GUI for the program. It allows the user to select a folder, load a shapefile, generate a buffer, and solve the TSP.'''
+    This class creates a GUI for the program. 
+    It allows the user to select a folder, load a shapefile,
+    generate a buffer, and solve the TSP.'''
     def __init__(self):
         self.config = Config()
         self.config.set_default()
-        self.folder_location = self.config.config['current_map']['folder_location']
         self.driver = None
         self.root = Tk()
 
@@ -30,25 +32,30 @@ class Gui:
         self.frm.grid()
 
         self.terminal = ttk.Label(self.frm, text="[Terminal]")
-    
-    
 
-    def check_necessities(self, method_name):
+
+    def check_necessities(self, method_name:str)->bool:
+        '''
+        Checks that the necessary attributes are present for the method to run,
+        if not will add a message to the terminal with instructions
+        '''
         necessities = {
             'select_folder': [],
-            'load_shapefile': ['folder_location'],
+            'load_shapefile': [],
             'add_to_terminal': [],
             'generate_picture': ['driver'],
             'save_output': ['driver'],
             'load_next_buffer': ['driver'],
             'load_next_standing_location': ['driver'],
             'generate_points': ['driver'],
-            'generate_transects': ['driver',('driver','cities')],
+            'generate_transects': ['driver',('driver','cities'),('driver','clustered')],
             'solve_tsp': ['driver',('driver','cities')],
             'solve_transects': ['driver',('driver','transects')],
-            'view_threed': ['driver'],
+            'view_threed': ['driver',('driver','cities')],
+            'create_clusters': ['driver',('driver','cities')],
+            'cycle_cluster': ['driver',('driver','clustered')],
         }
-    
+
         missing = []
         for key in necessities.get(method_name, []):
             if isinstance(key, tuple):
@@ -59,7 +66,7 @@ class Gui:
                 if attr_value is None or attr_value == []:
                     missing.append(attr)
                     break
-                
+
 
             else:
                 value = getattr(self, key, None)
@@ -68,9 +75,8 @@ class Gui:
                     break
         if missing:
             self.log_error(missing[0])
-            # self.add_to_terminal(f"Missing {missing} for {method_name}")
             raise ValueError(f"Missing {missing} for {method_name}")
-    
+
         return True
 
     def log_error(self, error):
@@ -83,6 +89,7 @@ class Gui:
             'cities':'104: Cities not generated',
             'transects':'103: Transects not generated',
             'no path':'105: No path generated',
+            'clustered':'106: Clusters not generated',
         }
         if error in errors:
             self.add_to_terminal(errors[error])
@@ -90,41 +97,40 @@ class Gui:
 
     def select_folder(self):
         '''
-        Function to select a folder using a file dialog. The selected folder is stored in the config file.
+        Function to select a folder using a file dialog.
+        The selected folder is stored in the config file.
         '''
         self.check_necessities('select_folder')
-        self.folder_location = askdirectory(initialdir="/Users/maxrobertson/Documents/")
-        self.config.config['current_map']['folder_location'] = self.folder_location
+        self.config.update_nested(['current_map','folder_location'],
+                                  askdirectory(initialdir="/Users/maxrobertson/Documents/"))
         self.add_to_terminal("Folder selected")
-        
-        self.config.save_config()
+
+        # self.config.save_config()
 
     def load_shapefile(self,folder_location=None):
         '''
-        Function to load a shapefile. It creates a Driver object and loads the shapefile. It also generates a buffer and a picture of the buffer.
+        Function to load a shapefile. It creates a Driver object and loads the shapefile. 
+        It also generates a buffer and a picture of the buffer.
         Expensive to run
         '''
-        if folder_location is not None:
-            self.folder_location = folder_location
+        if folder_location is None:
+            folder_location = self.config.get_nested('current_map','folder_location')
 
-        number_of_points = int(self.config.config['distances']['number_of_points_per_area'])
-        if self.folder_location == '':
-            if self.config.config['current_map']['folder_location'] == '':
-                self.add_to_terminal("Invalid folder selected, please try again")
-                self.add_to_terminal("Ensure folder contains one .tif file and one .shp file ")
-
-                return
-            else:
-                self.folder_location = self.config.config['current_map']['folder_location']
-                self.add_to_terminal("Loading shapefile, from previous load")
+        if folder_location == '':
+            self.add_to_terminal("Invalid folder selected, please try again")
+            return
+        
         self.check_necessities('load_shapefile')
         self.add_to_terminal("Loading shapefile")
-        self.driver = Driver(self.folder_location,number_of_points)
+
+        self.driver = Driver()
         self.driver.buffer_coords=[]
         try:
-            self.driver.load_shp_file()
-        except (FileNotFoundError,ValueError):
+            self.driver.load_shp_file(folder_location)
+        except (FileNotFoundError,ValueError) as e:
+            print(e)
             self.add_to_terminal("Shapefile not found, please try again")
+            self.add_to_terminal(e)
             return
         self.driver.clean_buffers(len(self.driver.buffer_coords))
         
@@ -149,21 +155,46 @@ class Gui:
                          area=True,
                          standing_location=True,
                          cities=True,
+                         clusters=False,
                          path=False,
                          transects=False,
                          transect_path=False,
                          transect_all_points=False,
-                         test=False):
+                         test=False,
+                         flyable = True):
         '''
-        Generates a picture depending on the parameters given. It uses matplotlib to plot the points and lines.
+        Generates a picture depending on the parameters given. 
+        It uses matplotlib to plot the points and lines.
         Saves the picture in the Output folder
         '''
         plt.clf()
+
+        flyable = self.config.get_nested('point_creation','flyable_areas')
+        if buffer is False and flyable is False:
+            buffer = False
+        else:
+            buffer = not flyable
+        if clusters:
+            cluster_points = self.driver.clustered
+            for ind,cluster in enumerate(cluster_points):
+
+                opacity = 1
+                if ind != self.driver.current_cluster:
+                    opacity = 0.4
+                cluster_x = [coord[0] for coord in cluster if coord in self.driver.cities]
+                cluster_y = [coord[1] for coord in cluster if coord in self.driver.cities]
+                plt.scatter(cluster_x,cluster_y,alpha=opacity)
         if buffer:
             buffer_points = self.driver.buffer_coords[self.driver.current_buffer]
             buffer_x = [coord[0] for coord in buffer_points]
             buffer_y = [coord[1] for coord in buffer_points]
             plt.plot(buffer_x, buffer_y, 'r-', label='Buffer')
+        if flyable:
+            flyable = self.driver.flyable_area[self.driver.current_flyable_area]
+            print(flyable)
+            flyable_x = [coord[0] for coord in flyable]
+            flyable_y = [coord[1] for coord in flyable]
+            plt.plot(flyable_x, flyable_y, 'b-', label='Flyable Area')
         if area:
             for ind,point in enumerate(self.driver.area_coords):
                 area_x = [coord[0] for coord in point]
@@ -186,24 +217,30 @@ class Gui:
             plt.scatter(standing_x,standing_y, color = 'blue',label='Human Location')
 
         if transects:
-            for point in self.driver.best_path_coords:
-                if len(self.driver.transects[point]) ==1: pass
-                else:
-                    transect = self.driver.transects[point]
-                    transect_x = [x[0] for x in transect if x[0] is not None and x[1] is not None]
-                    transect_y = [x[1] for x in transect if x[0] is not None and x[1] is not None]
-                    # transect_x = transect[0][0], transect[1][0], transect[2][0]
-                    # transect_y = transect[0][1], transect[1][1], transect[2][1]
-                    plt.plot(transect_x, transect_y, 'orange')
+            for _,transect in self.driver.transects[self.driver.current_cluster].items():
+                if len(transect) == 1:
+                    continue
+
+                transect_x = [x[0] for x in transect if x[0] is not None and x[1] is not None]
+                transect_y = [x[1] for x in transect if x[0] is not None and x[1] is not None]
+
+                plt.plot(transect_x, transect_y, 'orange')
 
         if transect_path:
-
             transect_path_x = [coord[0][0] for coord in self.driver.transect_path]
             transect_path_y = [coord[0][1] for coord in self.driver.transect_path]
+
             if transect_all_points:
-                plt.plot(transect_path_x, transect_path_y, 'purple', label='Transect Path',marker='o')
+                plt.plot(transect_path_x, 
+                         transect_path_y, 
+                         'purple', 
+                         label='Transect Path',
+                         marker='o')
             else:
-                plt.plot(transect_path_x, transect_path_y, 'purple', label='Transect Path')
+                plt.plot(transect_path_x, 
+                         transect_path_y, 
+                         'purple', 
+                         label='Transect Path')
         
         output_path = self.config.config['io']['output_folder']
         graph_name = self.config.config['io']['graph_picture_name']
@@ -216,7 +253,7 @@ class Gui:
         plt.savefig(os.path.join(output_path, graph_name))
         if not test:
             plt.close()
-        
+
         self.update_image()
         if test:
             return plt.gcf()
@@ -227,32 +264,25 @@ class Gui:
         This is compataible with Flylichi\n
         Requires implementation of camera and speed operations
         '''
+        pointcloud = self.driver.pointcloudholder
         self.check_necessities('save_output')
         if not self.driver.transect_path or not self.driver.best_path_coords:
             self.log_error('no path')
             return
-        seen_interpolated = []
-        
-        height = float(self.config.config['distances']['height_above_ground_m'])
+
         if self.driver.transect_path:
-            threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.transect_path)
-            # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.transect_path]
+            threed_coords = pointcloud.interpolate_route(self.driver.transect_path)
         else:
             if not isinstance(self.driver.best_path_coords[0][1],bool):
                 self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords]
-            threed_coords = self.driver.pointcloudholder.interpolate_route(self.driver.best_path_coords)
-
-            # threed_coords = [[x,y,self.driver.pointcloudholder.find_altitude((x,y),height),plot] for (x,y),plot in self.driver.best_path_coords]
- 
-        # for point in threed_coords: #UGLY CODE fixing a bug elsewhere by removing duplicates
-        #     if point not in seen_interpolated:
-        #         seen_interpolated.append(point)
-        saver = Converter(self.driver.folder_path)
+            threed_coords = pointcloud.interpolate_route(self.driver.best_path_coords)
+        folder_path = self.config.get_nested('current_map','folder_location')
+        saver = Converter(folder_path)
         saver.convert_mercader_to_lat_long(threed_coords)
         saver.create_bearings()
 
         buffer_id = self.driver.current_buffer
-        saver.save_all(buffer_id,self.driver.transects,self.driver.folder_path)
+        saver.save_all(buffer_id,self.driver.transects,folder_path,self.driver.current_cluster)
         # saver.create_csv(str(buffer_id))
         self.add_to_terminal("Output saved")
 
@@ -262,7 +292,7 @@ class Gui:
         '''
         self.check_necessities('load_next_buffer')
 
-        self.driver.current_buffer =(self.driver.current_buffer+ 1)%len(self.driver.buffer_coords)
+        self.driver.cycle_buffer()
         self.add_to_terminal("Buffer loaded")
         if len(self.driver.buffer_coords) == 1:
             self.add_to_terminal("Only one buffer present")
@@ -275,7 +305,11 @@ class Gui:
         if len(self.driver.standing_locations) == 0:
             self.add_to_terminal("No standing locations present")
             return
-        self.driver.current_standing_id = (self.driver.current_standing_id + 1) % len(self.driver.standing_locations)
+        possible_standing_locations= len(self.driver.standing_locations)
+        next_standing_id = (self.driver.current_standing_id+1) % possible_standing_locations
+        # next_standing_id = current_standing_id+1
+        self.driver.current_standing_id = next_standing_id
+        # self.driver.current_standing_id = (self.driver.current_standing_id + 1) % len(self.driver.standing_locations)
         self.generate_picture(cities = False)
 
     def generate_points(self):
@@ -283,15 +317,12 @@ class Gui:
         Loads the standing locations and generates points around them with DVLOS\n
         '''
         self.check_necessities('generate_points')
-        if self.driver is None:
-            self.add_to_terminal("Please load a shapefile first")
-            return
-        self.driver.number_points = int(self.config.config['distances']['number_of_points_per_area'])
 
         self.driver.best_path_coords = []
         self.driver.pointcloudholder.dvlos_lines=[]
         self.driver.transect_path = []
         self.driver.transects = []
+
         self.add_to_terminal("Generating point cloud")
         self.driver.pointcloudholder.read_tif()
         self.add_to_terminal("Point cloud loaded")
@@ -299,7 +330,8 @@ class Gui:
             self.driver.load_standing_locations()
             self.config.config['current_map']['human_location'] = self.driver.standing_locations
             self.config.save_config()
-            xystart = (self.driver.standing_locations[self.driver.current_standing_id][0],self.driver.standing_locations[self.driver.current_standing_id][1])
+            xystart = (self.driver.standing_locations[self.driver.current_standing_id][0],
+                       self.driver.standing_locations[self.driver.current_standing_id][1])
             self.add_to_terminal("Standing location loaded")
         except (ValueError,IndexError) as e: # value and index errors
             print(e)
@@ -307,7 +339,11 @@ class Gui:
             self.add_to_terminal("Error loading standing locations, ensure a .txt file is present")
 
         self.add_to_terminal("Generating points")
-        self.driver.generate_points_standard(xystart)
+        self.driver.grid_distances = None
+        if self.config.get_nested('point_creation','random_point_generation'):
+            self.driver.generate_points_random(xystart)
+        else:
+            self.driver.generate_points_standard(xystart)
         self.add_to_terminal("Points generated")
         self.generate_picture(cities=True)
 
@@ -319,12 +355,13 @@ class Gui:
             self.check_necessities('generate_transects')
 
             best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) if x not in self.driver.best_path_coords[:i]]
-            self.driver.create_transects(best_path_coords_no_duplicates)
+            self.driver.best_path_coords = best_path_coords_no_duplicates
+            self.driver.create_transects()
             self.add_to_terminal("Transects generated")
-            self.generate_picture(cities = True,
-                                transects = True)
+            self.generate_picture(cities = False,
+                                transects = True,
+                                clusters=True)
         except ValueError as e:
-            self.add_to_terminal("Error in transect generation")
             print(e)
 
     def solve_tsp(self):
@@ -337,31 +374,41 @@ class Gui:
         self.driver.solve_tsp()
         self.add_to_terminal("TSP solved")
         seen=[]
-        for point in self.driver.best_path_coords: #UGLY CODE fixing a bug elsewhere by removing duplicates
+        for point in self.driver.best_path_coords: 
             if point not in seen:
                 seen.append(point)
         self.driver.best_path_coords = seen
         self.generate_picture(cities = True,
                               path = True)
-    
+
     def solve_transects(self):
         '''
         Solve the transect route with brute force and generate pictures\n
         '''
         self.check_necessities('solve_transects')
-        if len(self.driver.transects) >= 30:
-            self.add_to_terminal("Too many transects to solve, please reduce the number of points")
-            return        
-
-
         self.add_to_terminal("Solving transect route")
 
         self.driver.solve_transect_route()
         self.add_to_terminal("Transect route solved")
-        self.generate_picture(cities=True,
+        self.generate_picture(cities=False,
                               transect_path=True,
-                              transect_all_points=False)
+                              transect_all_points=False,
+                              clusters=True)
 
+    def create_clusters(self):
+        self.check_necessities('create_clusters')
+        self.driver.cluster_points()
+        self.generate_picture(cities = False,
+                              clusters=True)
+        number_of_clusters = len(self.driver.clustered)
+        self.add_to_terminal(f'{number_of_clusters} Clusters generated')
+
+    def cycle_cluster(self):
+        self.check_necessities('cycle_cluster')
+        self.driver.cycle_cluster()
+        self.generate_picture(cities = False,
+                              clusters = True)
+        self.add_to_terminal('Next cluster loaded')
 
     def update_image(self):
         '''
@@ -374,7 +421,7 @@ class Gui:
             img = img.resize((400, 400))
             img_tk = ImageTk.PhotoImage(img)
             label_img = ttk.Label(self.frm, image=img_tk)
-            label_img.grid(column=2, row=0, rowspan=8)
+            label_img.grid(column=2, row=0, rowspan=13)
             label_img.image = img_tk  
         except Exception as e:
             print("Error loading image:", e)
@@ -385,12 +432,18 @@ class Gui:
         '''
         self.check_necessities('view_threed')
 
+        flyable = self.config.get_nested('point_creation','flyable_areas')
+        if flyable:
+            boundary = self.driver.flyable_area[self.driver.current_flyable_area]
+        else:
+            boundary = self.driver.buffer_coords[self.driver.current_buffer]
+        
         if not self.driver.transect_path and not self.driver.best_path_coords:
             self.log_error('no path')
             return
 
         self.add_to_terminal("Generating 3D view")
-        
+
         if self.driver.standing_locations:
             standing_location = self.driver.standing_locations[self.driver.current_standing_id]
         else:
@@ -401,10 +454,11 @@ class Gui:
                 human_location=standing_location,
                 dvlos = True,
                 best_path_coords=self.driver.transect_path,
-                buffer_coords=self.driver.buffer_coords[self.driver.current_buffer]) 
+                buffer_coords=boundary) 
             return
         if not isinstance(self.driver.best_path_coords[0][1],bool):
-            best_path_coords_bool = [[x,False]for x in self.driver.best_path_coords] #Required to have a boolean after each point to show camera movements 
+            #Required to have a boolean after each point to show camera movements 
+            best_path_coords_bool = [[x,False] for x in self.driver.best_path_coords] 
         else:
             best_path_coords_bool = self.driver.best_path_coords
         self.driver.pointcloudholder.show_point_cloud(
@@ -412,7 +466,7 @@ class Gui:
             human_location=standing_location,
             dvlos = True,
             best_path_coords=best_path_coords_bool,
-            buffer_coords=self.driver.buffer_coords[self.driver.current_buffer]
+            buffer_coords=boundary
             )
         self.add_to_terminal("3D view generated")
 
@@ -425,20 +479,18 @@ class Gui:
             '''
             Saves the config file with the new values
             '''
-
             for key, value in self.config.config.items():
-                for key2,value2 in value.items():
+                for key2,_ in value.items():
                     if key2 in self.default_values_tk:
-                        self.config.config[key][key2] = self.default_values_tk[key2].get()
-            buffer=float(self.default_values_tk['buffer_m'].get())
-            if buffer > 0:
-                buffer = -buffer
-            self.config.config['distances']['buffer_m'] =buffer
-        
+                        if isinstance(self.config.config[key][key2],dict):
+                            self.config.update_nested([key,key2,'value'],self.default_values_tk[key2].get())
+                            self.config.config[key][key2]['value'] = self.default_values_tk[key2].get()
+                        else:
+                            self.config.config[key][key2] = self.default_values_tk[key2].get()
 
             self.config.save_config()
             config_window.destroy()
-    
+
         def reset_config():
             '''
             Defaults the config file to the default values'''
@@ -448,29 +500,58 @@ class Gui:
 
         config_window = Toplevel(self.root)
         config_window.title("Configuration")
-        config_window.geometry("400x900")
-        
+        config_window.geometry("1400x400")
+
+        widget_factory = WidgetFactory(config_window)
         ttk.Label(config_window, text="Configuration Options").grid(column=0, row=0)
         counter=0
+        bold_font = font.Font(weight='bold')
+        column=0
         for key,value in self.config.config.items():
-            
-            ttk.Label(config_window, text=key).grid(column=0, row=counter+1)
+            if counter>=8:
+                column+=2
+                counter=1
             counter+=1
 
-            for key2, value2 in value.items():
-                self.default_values_tk[key2] = tk.StringVar(value = self.config.config[key][key2])
-                ttk.Label(config_window, text=f"{key2}:").grid(column=0, row=counter+1)
-                ttk.Entry(config_window, textvariable=self.default_values_tk[key2]).grid(column=1, row=counter+1)
-                counter+=1
+            ttk.Label(config_window, text=key,font=bold_font).grid(column=column, row=counter)
 
-        ttk.Button(config_window, text="Save", command=lambda: save_config(config_window)).grid(column=0, row=counter+2)
-        ttk.Button(config_window, text="Reset to Defaults", command=reset_config).grid(column=1, row=counter+2)
+            for key2, value2 in value.items():
+                if isinstance(value2,dict):
+                    print(value2)
+                    if value2['type'] == 'hidden':
+                        continue
+                    if value2['type'] == 'checkbutton':
+                        if self.config.get_nested(key,key2) is False:
+                            val = False
+                        else:
+                            val = True
+                        self.default_values_tk[key2] = tk.BooleanVar(value = val)
+                    else:
+                        self.default_values_tk[key2] = tk.StringVar(value = self.config.get_nested(key,key2))
+
+                    entry_type= value2.get('type', 'entry')
+                    default_value = value2.get('default_value', '')
+                    min_value = value2.get('min_value', None)
+                    max_value = value2.get('max_value', None)
+                    posssible_values = value2.get('values',None)
+                    widget_factory.create_widget(entry_type,{'from': min_value,
+                                                            'to': max_value,
+                                                            'orient': 'horizontal',
+                                                            'variable' :self.default_values_tk[key2],
+                                                            'values':posssible_values}).grid(column=column+1, row=counter+1,sticky='w')
+                elif isinstance(value2,(int,str,float)):
+                    self.default_values_tk[key2] = tk.StringVar(value = self.config.config[key][key2])
+                    ttk.Entry(config_window, textvariable=self.default_values_tk[key2]).grid(column=column+1, row=counter+1,sticky='w')
+                ttk.Label(config_window, text=f"{key2}:").grid(column=column, row=counter+1)
+                counter+=1
+        ttk.Button(config_window, text="Save", command=lambda: save_config(config_window)).grid(column=column, row=counter+2)
+        ttk.Button(config_window, text="Reset to Defaults", command=reset_config).grid(column=column+1, row=counter+2)
 
     def run_gui(self):
         '''
         Main function to run the GUI\n
         '''
-        style = ttk.Style()
+        # style = ttk.Style()
         # style.theme_use('default')
 
 
@@ -483,12 +564,14 @@ class Gui:
         ttk.Button(self.frm,text="Generate points",command=self.generate_points).grid(column=1, row=3)
         ttk.Button(self.frm,text="Cycle Standing Location",command=self.load_next_standing_location).grid(column=1, row=4)
         ttk.Button(self.frm,text="Solve TSP",command=self.solve_tsp).grid(column=1, row=5)
-        ttk.Button(self.frm,text="Generate Transects",command=self.generate_transects).grid(column=1, row=6)
-        ttk.Button(self.frm,text="Solve Transects",command=self.solve_transects).grid(column=1, row=7)
-        ttk.Button(self.frm,text="View 3D",command=self.view_threed).grid(column=1, row=8)
-        ttk.Button(self.frm, text="adjust config", command=self.create_config_window).grid(column=0, row=9)
+        ttk.Button(self.frm,text="Form Clusters",command = self.create_clusters).grid(column=1,row=6)
+        ttk.Button(self.frm,text="Cycle Cluster",command = self.cycle_cluster).grid(column=1,row=7)
+        ttk.Button(self.frm,text="Generate Transects",command=self.generate_transects).grid(column=1, row=8)
+        ttk.Button(self.frm,text="Solve Transects",command=self.solve_transects).grid(column=1, row=9)
+        ttk.Button(self.frm,text="View 3D",command=self.view_threed).grid(column=1, row=10)
+        ttk.Button(self.frm, text="adjust config", command=self.create_config_window).grid(column=0, row=11)
 
-        ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=9)
+        ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=12)
 
         self.update_image()
         self.root.mainloop()
@@ -496,4 +579,4 @@ class Gui:
 if __name__ == "__main__":
     gui = Gui()
     gui.run_gui()
-
+    # gui.create_config_window()

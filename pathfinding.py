@@ -143,6 +143,32 @@ class Pathfinder():
         while current in came_from:
             current = came_from[current]
             total_path.append(current)
+        cleaned_path = [total_path[0]]
+        if self.obstacles ==[] or self.obstacles == [[]]:
+            cleaned_path = total_path
+        else:
+
+            for ind in range(1,len(total_path)-1):
+                point = total_path[ind]
+                previous_point=total_path[ind-1]
+                next_point=total_path[ind+1]
+                if point in self.cities:
+                    cleaned_path.append(point)
+
+                else:
+                    if any(self.line_crosses_polygon(previous_point,
+                                                    next_point,
+                                                    obstacle)
+                                                    for obstacle in self.obstacles):
+                        cleaned_path.append(point)
+  
+
+            cleaned_path.append(total_path[-1])
+        total_path = cleaned_path
+            
+
+                
+
         optimum_path_distance = 0
         for i in range(len(total_path)-1):
             optimum_path_distance += math.dist(total_path[i],total_path[i+1])
@@ -183,12 +209,17 @@ class Pathfinder():
             If a path is unable to be found, the function will call itself recursively with a higher adjustment value.\n
             This will create a larger grid and allow for more possible paths.\n
         '''
+        if len(start)==3:
+            start = (start[0],start[1])
+        if len(goal)==3:
+            goal = (goal[0],goal[1])
         ### MESSSYY
         if isinstance(start,Node):
             raise TypeError(f"Expected a tuple for coordinates, got {type(start)}")
         
-        if self.obstacles == [[]]: # if no obstacles return the euclidean route
+        if self.obstacles == [[]] or self.obstacles == []: # if no obstacles return the euclidean route
             return [start,goal],math.dist(start,goal)
+        
         if not self.line_crosses_polygon(start,goal,self.obstacles[self.current_buffer]): # if doesnt cross any obstacles return euclidean route
             return [start,goal],math.dist(start,goal)
 
@@ -233,7 +264,7 @@ class Pathfinder():
                         f_score[direction[0]] = g_score[direction[0]] + self.h(self.grid_distances[direction[0]],goal)
                         heapq.heappush(open_heap, (f_score[direction[0]], direction[0]))
 
-        maximum_recursive_depth = int(self.config.config['speed_related']['maximum_recusive_depth'])
+        maximum_recursive_depth = int(self.config.get_nested('speed_related','maximum_recusive_depth'))
         if self.number_of_times_grid_generated < maximum_recursive_depth:
             return self.a_star(start.coord,goal.coord,self.number_of_times_grid_generated,step,recusive_depth=recusive_depth+1)
 
@@ -362,6 +393,10 @@ class Pathfinder():
         otherwise the distance is calculated using the euclidean distance.\n
         The distances are stored in a dictionary with the cities as the key (start,end) and the distance as the value.\n
         '''
+        if self.human_location:
+            standing_location = self.human_location[0:2]
+        else:
+            standing_location = (np.inf,np.inf)
         distances= {}
         n = len(self.cities)
         for i in range(n):
@@ -371,8 +406,14 @@ class Pathfinder():
                 if i == j:
                     distances[(start,end)] = np.inf
                     continue
+                if start == standing_location or end == standing_location:
+                    distances[(start,end)] = [[start,end],math.dist(start,end)]
+                    continue
                 if self.obstacles:
                     if any(self.line_crosses_polygon(start,end,obstacle) for obstacle in self.obstacles):
+                        print(self.line_crosses_polygon(start,end,self.obstacles[0]))
+                        print('ASTAR',start,end)
+                        print(standing_location)
                         distances[(start,end)] = self.a_star(start,end,adjustment=1,step=step)
                         continue
                 # elif not self.all_points_visible_interpolated_line(start,end):
@@ -387,7 +428,8 @@ class Pathfinder():
         Generates a line between two points and checks if all points on the line are visible from the human location.\n
         Will create a point along the line every 10m.\n
         '''
-        height_above_ground = float(self.config.config['distances']['height_above_ground_m'])
+        height_above_ground = float(self.config.get_nested('distances','height_above_ground_m'))
+        # float(self.config.config['distances']['height_above_ground_m'])
         length = int(np.linalg.norm(np.array(start)-np.array(end))/10)
         x= np.linspace(start[0],end[0],num=length)
         y= np.linspace(start[1],end[1],num=length)
@@ -499,8 +541,8 @@ class AntColony(Pathfinder):
                  human_location:XYZCoordinate, 
                  step:float,
                  current_buffer:int,
-                 n_ants=10, n_iterations=50, alpha=1.0, beta=2.0, evaporation=0.5, q=100):
-        super().__init__(cities, obstacles, pointcloud, human_location,step,current_buffer)
+                 n_ants=10, n_iterations=50, alpha=1.0, beta=2.0, evaporation=0.5, q=100, distances=None):
+        super().__init__(cities, obstacles, pointcloud, human_location,step,current_buffer,distances)
         self.n_ants = n_ants
         self.n_iterations = n_iterations
         self.alpha = alpha
@@ -602,9 +644,10 @@ class BruteForce(Pathfinder):
                   pointcloud:object,
                   human_location:XYZCoordinate,
                   step:float,
-                  current_buffer:int
+                  current_buffer:int,
+                  distances = None
                   )->None:
-        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer)
+        super().__init__(cities,obstacles,pointcloud,human_location,step,current_buffer=current_buffer,distances=distances)
 
     def solve(self)->tuple[XYCoordinates,float]:
         print('Solving TSP with brute force...')
@@ -858,6 +901,15 @@ if __name__ == '__main__':
     current_buffer = 0
 
     pathfinder = BnB(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    path, distance = pathfinder.solve()
+    print("Path:", path)
+    print("Distance:", distance)
+    pathfinder = AntColony(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    path, distance = pathfinder.solve()
+    print("Path:", path)
+    print("Distance:", distance)
+
+    pathfinder = BruteForce(cities, obstacles, pointcloud, human_location, 1, current_buffer)
     path, distance = pathfinder.solve()
     print("Path:", path)
     print("Distance:", distance)

@@ -76,7 +76,8 @@ class VoxelGrid:
     def safe_query(self,point:XYZCoordinate) -> list[XYZCoordinate]:
         voxel = self.get_voxel_index(point)
         voxel_points = list(self.grid.get(voxel, []))  # Avoid KeyError if empty
-        dvlos_distance = float(self.config.config['speed_related']['DVLOS_m'])
+        dvlos_distance = float(self.config.get_nested('speed_related','DVLOS_m'))
+        # dvlos_distance = float(self.config.config['speed_related']['DVLOS_m'])
         seen = set(map(tuple, voxel_points))
 
         min_x, min_y, min_z = voxel

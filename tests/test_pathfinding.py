@@ -33,7 +33,7 @@ def test_distances_between_cities_with_obstacles():
                              step=0.25,
                              current_buffer=0,
                              human_location=None)
-    assert pathfinder.distances[((0,0),(0,10))][1] != 10
+    assert pathfinder.distances[((0,0),(0,10))][1] != 10.0
     assert pathfinder.distances[(0,0),(0,10)][1] <17 # pythagoream case would be ~14.1
 
 def test_hurestic_h_function_for_a_star():
@@ -90,8 +90,8 @@ def test_h_function_invalid_input_not_tuple_or_node():
 def test_reconstruct_path():
     came_from={(1, 0): (0, 0), (1, 1): (1, 0), (2, 1): (1, 1)}
     current=(2, 1)
-    pathfinder = Pathfinder(cities=[(0, 0),(2,1)],
-                             obstacles=None,
+    pathfinder = Pathfinder(cities=[(0, 0),(2,1),(1,0)],
+                             obstacles=[],
                              pointcloud=None,
                              step=1,
                              current_buffer=0,
@@ -99,7 +99,7 @@ def test_reconstruct_path():
     path = pathfinder.reconstruct_path(came_from, current)
     print(path)
     assert path[0] == [(0, 0), (1, 0), (1, 1), (2, 1)]
-    assert path[1]==3
+    assert path[1] == 3
 
 def test_reconstruct_path_list_not_tuple():
     came_from={(1, 0): (0, 0), (1, 1): (1, 0), (2, 1): (1, 1)}
@@ -213,7 +213,8 @@ def test_calculate_grid_distances_obstacles():
 def test_all_points_visible_on_interpolated_line():
     cities = [(0,0),(2,2)]
     empty_obstacles = [[]]
-    pointcloud = PointCloud('Fake_path')
+    config.update_nested(['current_map','folder_location'],'fake_path')
+    pointcloud = PointCloud()
     pathfinder = Pathfinder(cities=cities,
                              obstacles=empty_obstacles,
                              pointcloud=pointcloud,
@@ -232,8 +233,9 @@ def test_all_points_not_visible_on_interpolated_line():
     
     config.update_nested(['speed_related', 'DVLOS_interpolation_m'], '1')
     config.update_nested(['distances', 'height_above_ground_m'], '0')
+    config.update_nested(['current_map','folder_location'],'fake_path')
     
-    pointcloud = PointCloud('Fake_path')
+    pointcloud = PointCloud()
     pathfinder = Pathfinder(cities=cities,
                              obstacles=empty_obstacles,
                              pointcloud=pointcloud,

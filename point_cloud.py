@@ -23,12 +23,12 @@ class PointCloud:
     '''
     PointCloud class to manage the point cloud data and perform operations on it.\n
     '''
-    def __init__(self, tif_path:str):
+    def __init__(self):
         self.config = Config()
         self.point_cloud_holder = o3d.geometry.PointCloud()
         self.uav_pointcloud = o3d.geometry.PointCloud()
         self.xyz = []
-        self.tif_path = tif_path
+        self.tif_path = self.config.get_nested('current_map','folder_location')
         self.kdtree = None
         self.dvlos_lines = []
         self.grid = VoxelGrid((0,0,0),float(self.config.config['distances']['voxel_size_m']))
@@ -138,16 +138,29 @@ class PointCloud:
         Returns:
             float: Distance to the nearest point in the point cloud.
         """        
+        height = False
         if len(point) == 3:
+            # height = point[2]
+            # point =(point[0], point[1])
+            
             return self.distance_to_closest_point_in_voxel(point)
-        elif len(point) == 2:
+        if len(point) == 2:
             nearest_point = self.nearest_point(point)
-            z_value = self.find_altitude(point, 0)
+            if height:
+                z_value = height
+            else:
+                z_value = self.find_altitude(point, 0)
             point = (point[0], point[1], z_value)
             return float(np.linalg.norm(np.array(point)-np.array(nearest_point)))
         else:
             raise ValueError("The point should be a tuple of two or three coordinates (x, y) or (x, y, z).")
-        
+    
+    def dvlos_check_voxel(self,point:XYZCoordinate)->bool:
+        possible_points = self.grid.safe_query(point)
+        if not possible_points:
+            return True
+        return False
+
     def distance_to_closest_point_in_voxel(self, point: XYZCoordinate) -> float:
         """
         Helper method for distance_to_nearest_point, which finds the distance to the closest point in the voxel grid.
@@ -208,15 +221,18 @@ class PointCloud:
         '''
         Checks if two points are visible to each other\n
         '''
-        minimum_dvlos = float(self.config.config['speed_related']['DVLOS_m'])
-        uav_height = float(self.config.config['distances']['height_above_ground_m'])
+        minimum_dvlos=float(self.config.get_nested('speed_related','DVLOS_m'))
+        # minimum_dvlos = float(self.config.config['speed_related']['DVLOS_m'])
+        uav_height = float(self.config.get_nested('distances','height_above_ground_m'))
+        # uav_height = float(self.config.config['distances']['height_above_ground_m'])
 
         if len(point1)==2:
             point1 = (point1[0],point1[1], self.find_altitude(point1,uav_height))
         if len(point2)==2:
             point2 = (point2[0],point2[1], self.find_altitude(point2,uav_height))
 
-        interpolation_distance = float(self.config.config['speed_related']['DVLOS_interpolation_m'])
+        interpolation_distance = float(self.config.get_nested('speed_related','DVLOS_interpolation_m'))
+        # interpolation_distance = float(self.config.config['speed_related']['DVLOS_interpolation_m'])
 
         length = int(np.linalg.norm(np.array(point1)-np.array(point2))/interpolation_distance)
         x= np.linspace(point1[0],point2[0],num=length)
@@ -228,9 +244,14 @@ class PointCloud:
             if i %5 ==0:
                 if plot:
                     self.add_line_to_pointcloud(point1,line_between_two_points[i])
-            if self.distance_to_closest_point_in_voxel(line_between_two_points[i]) < minimum_dvlos:
+            if self.dvlos_check_voxel(line_between_two_points[i]):
+                continue
+            elif self.distance_to_nearest_point(line_between_two_points[i]) < minimum_dvlos:
                 visible = False
                 break
+            # if self.distance_to_closest_point_in_voxel(line_between_two_points[i]) < minimum_dvlos:
+            #     visible = False
+            #     break
             # if self.distance_to_nearest_point(line_between_two_points[i]) < minimum_dvlos:
                 # visible = False
                 # break
@@ -243,12 +264,13 @@ class PointCloud:
         '''
         bool_route = None
         interpolated_route = []
-        height = float(self.config.config['distances']['height_above_ground_m'])
+        height = float(self.config.get_nested('distances','height_above_ground_m'))
+        # height = float(self.config.config['distances']['height_above_ground_m'])
         if isinstance(route[0][1],bool):
             bool_route = route
             route = [point[0] for point in route]
-
-        interpolation_distance = float(self.config.config['distances']['interpolation_distance_m'])
+        interpolation_distance = float(self.config.get_nested('distances','interpolation_distance_m'))
+        # interpolation_distance = float(self.config.config['distances']['interpolation_distance_m'])
         for i in range(len(route)-1):
             p1 = np.array(route[i])
             p2 = np.array(route[i+1])
@@ -348,8 +370,8 @@ class PointCloud:
             best_path_coords = []
         if not buffer_coords:
             buffer_coords = []
-
-        uav_height = float(self.config.config['distances']['height_above_ground_m'])
+        uav_height = float(self.config.get_nested('distances','height_above_ground_m'))
+        # uav_height = float(self.config.config['distances']['height_above_ground_m'])
         add_to_point_cloud = []
         self.point_cloud_holder.points = o3d.utility.Vector3dVector(self.xyz)
         # self.point_cloud_holder.paint_uniform_color([0,1,0])
@@ -393,7 +415,8 @@ class PointCloud:
         '''
         Adds a line to the point cloud\n
         '''
-        uav_height= float(self.config.config['distances']['height_above_ground_m'])
+        uav_height = float(self.config.get_nested('distances','height_above_ground_m'))
+        # uav_height= float(self.config.config['distances']['height_above_ground_m'])
 
         if colour is None:
             colour = [1,1,1]
