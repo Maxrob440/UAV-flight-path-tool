@@ -350,7 +350,7 @@ class Driver:
 
         flyable = self.config.get_nested('point_creation','flyable_areas')
         if flyable:
-            area = self.flyable_area[self.flyable_area[self.current_flyable_area]]
+            area = self.flyable_area[self.current_flyable_area]
         else:
             area = self.buffer_coords[buffer_id]
         x_values = [x[0] for x in area]
