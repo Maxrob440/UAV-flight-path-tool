@@ -72,6 +72,14 @@ class Driver:
             raise ValueError(f"There should be either 1/2 .shp file in the folder, found: {len(possible_files)}")
         if len(possible_files) == 1 and flyable:
             raise ValueError("There should be 2 shapefiles in the folder if flyable areas are enabled.")
+        
+        if len(possible_files) == 2 and not flyable:
+            if 'flyable' in possible_files[0]:
+                possible_files.pop(0)
+            elif 'flyable' in possible_files[1]:
+                possible_files.pop(1)
+            
+            
         if len(possible_files) == 2 and flyable:
             if 'flyable' in possible_files[0]:
                 shp_file = os.path.join(folder_path, possible_files[0])
