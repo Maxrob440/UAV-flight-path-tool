@@ -19,17 +19,28 @@ class Converter:
         self.tif_file = tif_file
         self.lat_long_coords = []
         self.bearings = []
+        self.crs_info= None
 
     def show_crs(self):
         '''Shows the CRS information'''
+        print('Showing CRS information')
+        print(self.tif_file)
         with rasterio.open(self.tif_file) as src:
             print(src.crs)
+            self.crs_info = src.crs
     
-    def convert_mercader_to_lat_long(self,coords):
+    def convert_mercader_to_lat_long(self,coords,convert_from=None):
         '''Converts from the mercader (EPSG:2193) to lat long (EPSG:4326)'''
+        self.show_crs()
+        if convert_from is None:
+            if 'NZGD2000' in self.crs_info.to_string():
+                convert_from = "EPSG:2193"
+            elif 'EPSG:27700' in self.crs_info.to_string():
+                convert_from = "EPSG:27700"
+                
         inital_z = coords[0][0][2]-20
         for (x,y,z),plot in coords:
-            to_latlong = Transformer.from_crs("EPSG:2193", "EPSG:4326", always_xy=True)
+            to_latlong = Transformer.from_crs(convert_from, "EPSG:4326", always_xy=True)
             lon, lat = to_latlong.transform(x, y)
             self.lat_long_coords.append((lat, lon,z-inital_z,plot))
 
@@ -132,4 +143,10 @@ class Converter:
 
         
     
-
+if __name__ == "__main__":
+    tif_file = 'tests/test_files/complete_test/flat_sqaure.tif'  # Replace with your actual TIF file path
+    tif_file = 'example data/Babrings/babrings.tif'
+    tif_file= '/home/maxr/Documents/Github/UAV_flight_path/Rewrite/Data/MATA_03199/Base_Data/6_MATA_03199_dtm.tif'
+    converter = Converter(tif_file)
+    converter.show_crs()
+    

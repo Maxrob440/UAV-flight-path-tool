@@ -277,7 +277,10 @@ class Gui:
                 self.driver.best_path_coords = [[x,False]for x in self.driver.best_path_coords]
             threed_coords = pointcloud.interpolate_route(self.driver.best_path_coords)
         folder_path = self.config.get_nested('current_map','folder_location')
-        saver = Converter(folder_path)
+        possible_files = [file for file in os.listdir(folder_path) if file.endswith('.tif')]
+        tif_path = possible_files[0]
+        tif_path = os.path.join(folder_path, tif_path)
+        saver = Converter(tif_path)
         saver.convert_mercader_to_lat_long(threed_coords)
         saver.create_bearings()
 
