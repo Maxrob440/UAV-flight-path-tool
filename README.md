@@ -5,8 +5,9 @@ This is an initial draft
 
 ## Requirements
 
-Each folder must contain:
+Python 3.12.x is required for this software to run.
 
+Each folder must contain:
 - .tif file highlighting the area
 - .shp file showing the areas to be assessed
 - An optional but reccomended .txt file that contains mercader coordinates(x,y or x,y,z) of the available standing locations (allow DVLOS), examples in standing locations
