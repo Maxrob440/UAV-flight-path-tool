@@ -269,7 +269,6 @@ class Pathfinder():
             return self.a_star(start.coord,goal.coord,self.number_of_times_grid_generated,step,recusive_depth=recusive_depth+1)
 
         else:
-            print('A STAR FAILED')
             #     for obstacle in self.obstacles:
             #         x= [point[0] for point in obstacle]
             #         y= [point[1] for point in obstacle]
@@ -381,7 +380,6 @@ class Pathfinder():
 
         self.calculate_each_nearest()
         
-        print(f"Generated {len(nodes)} nodes.")
                     
         
     
@@ -411,9 +409,6 @@ class Pathfinder():
                     continue
                 if self.obstacles:
                     if any(self.line_crosses_polygon(start,end,obstacle) for obstacle in self.obstacles):
-                        print(self.line_crosses_polygon(start,end,self.obstacles[0]))
-                        print('ASTAR',start,end)
-                        print(standing_location)
                         distances[(start,end)] = self.a_star(start,end,adjustment=1,step=step)
                         continue
                 # elif not self.all_points_visible_interpolated_line(start,end):
@@ -541,7 +536,7 @@ class AntColony(Pathfinder):
                  human_location:XYZCoordinate, 
                  step:float,
                  current_buffer:int,
-                 n_ants=10, n_iterations=50, alpha=1.0, beta=2.0, evaporation=0.5, q=100, distances=None):
+                 n_ants=100, n_iterations=500, alpha=1.0, beta=2.0, evaporation=0.5, q=200, distances=None):
         super().__init__(cities, obstacles, pointcloud, human_location,step,current_buffer,distances)
         self.n_ants = n_ants
         self.n_iterations = n_iterations
@@ -810,15 +805,10 @@ class Christofides(Pathfinder):
 
     def solve(self):
         mst = self.create_minimum_spanning_tree(self.cities[0])
-        # print(mst)
         odd_vertices = self.find_odd_verticies_mms(mst)
-        # print(odd_vertices)
         matching = self.minimum_weight_matching(odd_vertices)
-        # print(matching)
         multigraph = self.form_multigraph(mst,matching)
-        # print(multigraph)
         vertices = self.eulerian_tour(multigraph)
-        # print(vertices)
         tsp = self.generate_tsp(vertices)
         distance = 0
         for i in range(len(tsp) - 1):
@@ -888,29 +878,261 @@ class BnB(Pathfinder):
 
         self.best_distance = best_distance
         self.best_path = best_path
-        print(f"Best path found: {self.best_path} with distance {self.best_distance}")
         return self.best_path, self.best_distance
 
+class HeldKarp(Pathfinder):
+    '''
+    Exact solution for the TSP using the Held-Karp algorithm (dynamic programming).\n
+    Time complexity is O(n^2 * 2^n), much faster than brute force but still exponential.\n
+    Best for: Small to medium problems (up to ~20 cities).\n
+    '''
+    def __init__(self, cities: XYCoordinates,
+                 obstacles: list[XYCoordinates],
+                 pointcloud: object,
+                 human_location: XYZCoordinate,
+                 step: float,
+                 current_buffer: int,
+                 distances=None) -> None:
+        super().__init__(cities, obstacles, pointcloud, human_location, step, current_buffer=current_buffer, distances=distances)
+
+    def solve(self) -> tuple[XYCoordinates, float]:
+        from itertools import combinations
+
+        n = len(self.cities)
+        all_indexes = range(n)
+        city_to_index = {city: idx for idx, city in enumerate(self.cities)}
+        index_to_city = {idx: city for city, idx in city_to_index.items()}
+
+        # C[(subset, end)] = (cost, previous_node)
+        C = {}
+
+        # Start at city[0], assume index 0
+        for k in range(1, n):
+            C[(frozenset([0, k]), k)] = (self.distances[(self.cities[0], self.cities[k])][1], 0)
+
+        for subset_size in range(3, n + 1):
+            for subset in combinations(range(1, n), subset_size - 1):
+                S = frozenset((0,) + subset)
+                for j in subset:
+                    prevs = [k for k in subset if k != j]
+                    min_dist = float('inf')
+                    min_prev = None
+                    for k in prevs:
+                        prev_cost = C[(S - {j}, k)][0]
+                        dist = self.distances[(self.cities[k], self.cities[j])][1]
+                        total = prev_cost + dist
+                        if total < min_dist:
+                            min_dist = total
+                            min_prev = k
+                    C[(S, j)] = (min_dist, min_prev)
+
+        # Close the tour by returning to the start
+        min_cost = float('inf')
+        last_city = None
+        for k in range(1, n):
+            cost = C[(frozenset(range(n)), k)][0] + self.distances[(self.cities[k], self.cities[0])][1]
+            if cost < min_cost:
+                min_cost = cost
+                last_city = k
+
+        # Reconstruct path
+        path = [0]
+        current_set = frozenset(range(n))
+        current_city = last_city
+
+        while len(current_set) > 1:
+            path.append(current_city)
+            _, prev_city = C[(current_set, current_city)]
+            current_set = current_set - {current_city}
+            current_city = prev_city
+        path.append(0)  # close the cycle
+
+        ordered_cities = [self.cities[i] for i in path]
+
+        # Fill in full paths using precomputed sub-paths
+        path_fillers = []
+        for point in ordered_cities:
+            if not path_fillers:
+                path_fillers.append(point)
+                continue
+            path_between = self.distances[(path_fillers[-1], point)][0]
+            path_fillers.extend(path_between[1:])  # skip first to avoid duplication
+
+        return path_fillers, min_cost
+
+from ortools.linear_solver import pywraplp
+import itertools
+
+class ILPSolver(Pathfinder):
+    '''
+    Exact TSP solver using Integer Linear Programming via Google OR-Tools.\n
+    Formulates TSP as an ILP with Miller-Tucker-Zemlin (MTZ) constraints to eliminate subtours.\n
+    Suitable for small to mid-sized problems (n < 100 depending on system).\n
+    '''
+
+    def __init__(self, cities: XYCoordinates,
+                 obstacles: list[XYCoordinates],
+                 pointcloud: object,
+                 human_location: XYZCoordinate,
+                 step: float,
+                 current_buffer: int,
+                 distances=None) -> None:
+        super().__init__(cities, obstacles, pointcloud, human_location, step, current_buffer=current_buffer, distances=distances)
+
+    def solve(self) -> tuple[XYCoordinates, float]:
+        n = len(self.cities)
+        solver = pywraplp.Solver.CreateSolver("CBC")
+        if not solver:
+            raise RuntimeError("OR-Tools solver not created successfully.")
+
+        x = {}
+        u = {}
+
+        # Decision variables: x[i,j] = 1 if path from i to j is taken
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    x[i, j] = solver.IntVar(0, 1, f'x[{i},{j}]')
+
+        # MTZ variables for subtour elimination
+        for i in range(1, n):
+            u[i] = solver.NumVar(1, n - 1, f'u[{i}]')
+
+        # Objective: minimize total distance
+        solver.Minimize(solver.Sum(
+            self.distances[(self.cities[i], self.cities[j])][1] * x[i, j]
+            for i in range(n) for j in range(n) if i != j
+        ))
+
+        # Constraints: exactly one outgoing edge from each node
+        for i in range(n):
+            solver.Add(solver.Sum(x[i, j] for j in range(n) if i != j) == 1)
+
+        # Constraints: exactly one incoming edge to each node
+        for j in range(n):
+            solver.Add(solver.Sum(x[i, j] for i in range(n) if i != j) == 1)
+
+        # MTZ Subtour elimination constraints
+        for i in range(1, n):
+            for j in range(1, n):
+                if i != j:
+                    solver.Add(u[i] - u[j] + (n - 1) * x[i, j] <= n - 2)
+
+        # Solve
+        status = solver.Solve()
+        if status != pywraplp.Solver.OPTIMAL:
+            raise RuntimeError("No optimal solution found.")
+
+        # Extract solution path
+        tour = [0]
+        visited = set(tour)
+        current = 0
+        while len(tour) < n:
+            for j in range(n):
+                if j != current and x[current, j].solution_value() > 0.5 and j not in visited:
+                    tour.append(j)
+                    visited.add(j)
+                    current = j
+                    break
+        tour.append(0)  # complete the cycle
+
+        # Reconstruct full path
+        ordered_cities = [self.cities[i] for i in tour]
+        path_fillers = []
+        for point in ordered_cities:
+            if not path_fillers:
+                path_fillers.append(point)
+                continue
+            path_between = self.distances[(path_fillers[-1], point)][0]
+            path_fillers.extend(path_between[1:])  # skip duplicate
+
+        total_distance = sum(
+            self.distances[(ordered_cities[i], ordered_cities[i + 1])][1]
+            for i in range(len(ordered_cities) - 1)
+        )
+
+        return path_fillers, total_distance
 
 
 if __name__ == '__main__':
-    cities = [(0, 0), (1, 2), (2, 4), (3, 1)]
-    obstacles = [[]]
-    pointcloud = None
-    human_location = (0, 0, 0)
-    current_buffer = 0
-
-    pathfinder = BnB(cities, obstacles, pointcloud, human_location, 1, current_buffer)
-    path, distance = pathfinder.solve()
-    print("Path:", path)
-    print("Distance:", distance)
-    pathfinder = AntColony(cities, obstacles, pointcloud, human_location, 1, current_buffer)
-    path, distance = pathfinder.solve()
-    print("Path:", path)
-    print("Distance:", distance)
-
-    pathfinder = BruteForce(cities, obstacles, pointcloud, human_location, 1, current_buffer)
-    path, distance = pathfinder.solve()
-    print("Path:", path)
-    print("Distance:", distance)
+    values={0.25:[],
+            0.5:[],
+            0.75:[],
+            1:[],
+            1.5:[],
+            2:[],
+            5:[]
+            }
+    for x in range(3,1000,1):
+        print(x)
+        # number_of_cities = random.randint(3, MAX_CITIES)
+        cities = set()
+        while len(cities) != x:
+            cities.add((random.randint(0, 1000), random.randint(0, 5000)))
+            
+        cities = list(cities)
+        # cities = [(0, 0), (1, 2), (2, 4), (3, 1)]
+        obstacles = [[]]
+        pointcloud = None
+        human_location = (0, 0, 0)
+        current_buffer = 0
+    
+    
+        pathfinder = HeldKarp(cities, obstacles, pointcloud, None, 1, current_buffer)
+        start = time.time() 
+        path, distance = pathfinder.solve()
+        end = time.time()
+        timing = end-start
+     
+        print(timing)
+        if timing < 0.25:
+            values[0.25].append(x)
+        elif timing < 0.5:
+            values[0.5].append(x)
+        elif timing < 0.75:
+            values[0.75].append(x)
+        elif timing < 1:
+            values[1].append(x)
+        elif timing < 1.5:
+            values[1.5].append(x)
+        elif timing < 2:
+            values[2].append(x)
+        elif timing < 5:
+            values[5].append(x)
+        else:
+            break
+        
+    for key, value in values.items():
+        print(key,max(value) if value else 'No data', end='\n')
+    
+    # pathfinder = AntColony(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    # start = time.time() 
+    # path, distance = pathfinder.solve()
+    # end = time.time()
+    # print(f'Ant: {end-start} seconds')
+    # # print(f"Ant Colony Distance: {distance}")
+    
+    
+    # pathfinder = HeldKarp(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    # start = time.time() 
+    # path, distance = pathfinder.solve()
+    # end = time.time()
+    # print(f'HK: {end-start} seconds')
+    # # print(f"Held-Karp Distance: {distance}")
+    
+    
+    # pathfinder = ILPSolver(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    # start = time.time() 
+    # path, distance = pathfinder.solve()
+    # end = time.time()
+    
+    # print(f'ILP: {end-start} seconds')
+    
+    # pathfinder = ILPSolver(cities, obstacles, pointcloud, human_location, 1, current_buffer)
+    # start = time.time() 
+    # path, distance = pathfinder.solve()
+    # end = time.time()
+    
+    # print(f'ILP: {end-start} seconds')
+    # # print(f"ILP Solver Distance: {distance}")
 

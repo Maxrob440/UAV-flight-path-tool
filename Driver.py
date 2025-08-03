@@ -14,6 +14,7 @@ from point_cloud import PointCloud
 from pathfinding import Pathfinder,AntColony,BruteForce,Christofides,BnB
 import matplotlib.pyplot as plt
 from shp_file_generator import TransectGenerator
+from transect_solver import BruteTransectSolver,RandomTransectSolver
 
 Coordinate = tuple[float, float]
 Coordinates = list[Coordinate]
@@ -447,54 +448,21 @@ class Driver:
         2. Finds the shortest path out of these permutations
         3. If plot = True, plots the shortest path
         '''
-        possible_perms=[[]]
+        standing_location = None
+        if self.standing_locations:
+            standing_location = self.standing_locations[self.current_standing_id]
 
         if len(self.transects[self.current_cluster]) < 20:
-            # print(len(self.transects[self.current_cluster]),'transects in cluster, brute forcing')
-                
-
-            for i in self.best_path_coords:
-                if i not in self.transects[self.current_cluster]:
-                    continue
-                transect = self.transects[self.current_cluster][i]
-                issingle = len(transect) == 1
-                if issingle:
-    
-                    new_possible_perms = [x + [[transect[0],False]] for x in possible_perms]
-                else:
-                    new_possible_perms= [x +[[coord,True] for coord in transect] for x in possible_perms]
-                    new_possible_perms+=[x + [[coord,True] for coord in reversed(transect)] for x in possible_perms]
-                    
-                    # new_possible_perms = [x + [[self.transects[i][0],True],[self.transects[i][1],True],[self.transects[i][2],True]] for x in possible_perms]
-                    # new_possible_perms += [x + [[self.transects[i][2],True],[self.transects[i][1],True],[self.transects[i][0],True]] for x in possible_perms]
-                possible_perms = new_possible_perms
-
-            if self.standing_locations:
-                for perm in possible_perms:
-                    if perm[0]!=self.standing_locations[self.current_standing_id]:
-                        perm.insert(0,(self.standing_locations[self.current_standing_id][:2],False))
-
-            routes = []
-            #Compare the length of each possible path
-
-            for path in possible_perms:
-                length = self.route_length(path)
-                routes.append((path,length))
-
-
-
-            shortest_path = min(routes, key=lambda x: x[1])[0]
+            transect_solver = BruteTransectSolver(self.transects[self.current_cluster],
+                                                  self.best_path_coords,
+                                                  standing_location)
 
         else:
             print('Too many transects to brute force')
-            shortest_path=[]
-            for i in self.best_path_coords:
-                if len(self.transects[self.current_cluster][i]) == 1:
-                    shortest_path.append([self.transects[self.current_cluster][i][0],False])
-                else:
-                    for point in self.transects[self.current_cluster][i]:
-                        shortest_path.append([point,True])
-                
+            transect_solver = RandomTransectSolver(self.transects[self.current_cluster],
+                                                  self.best_path_coords,
+                                                  standing_location)
+        shortest_path = transect_solver.solve()
 
         #Adds to the transect path
         if self.standing_locations:
@@ -588,7 +556,8 @@ class Driver:
         if self.best_path_coords:
             print('Clustering points based on TSP path')
             clusterer = TspCluster(cities=self.cities,
-                                   best_path_coords=self.best_path_coords)
+                                   best_path_coords=self.best_path_coords,
+                                   human_location=human_location)
             self.clustered = clusterer.cluster()
             if not human_location:
                 return self.clustered
@@ -597,7 +566,7 @@ class Driver:
             print('no TSP')
             if self.standing_locations:
                 clusterer = DistanceCluster(cities=self.cities,
-                                            human_location=self.standing_locations[self.current_standing_id])
+                                            human_location=human_location)
                 self.clustered = clusterer.cluster()
                 for ind,cluster in enumerate(self.clustered):
                     pathfinder = BruteForce(cluster,self.buffer_coords,self.pointcloudholder, human_location,a_star_step,self.current_buffer)

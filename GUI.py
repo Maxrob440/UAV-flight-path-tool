@@ -4,6 +4,8 @@ from tkinter.filedialog import askdirectory
 from tkinter import font
 import os
 import tkinter as tk
+import webbrowser
+
 from PIL import Image, ImageTk
 import matplotlib
 import matplotlib.pyplot as plt
@@ -32,6 +34,12 @@ class Gui:
         self.frm.grid()
 
         self.terminal = ttk.Label(self.frm, text="[Terminal]")
+
+    def get_help(self):
+        '''
+        Launches web browser and loads the github wiki help page
+        '''
+        webbrowser.open_new('https://github.com/Maxrob440/UAV_flight_path/blob/main/Rewrite/Docs/Config.md')
 
 
     def check_necessities(self, method_name:str)->bool:
@@ -119,7 +127,7 @@ class Gui:
         if folder_location == '':
             self.add_to_terminal("Invalid folder selected, please try again")
             return
-        
+
         self.check_necessities('load_shapefile')
         self.add_to_terminal("Loading shapefile")
 
@@ -133,10 +141,10 @@ class Gui:
             self.add_to_terminal(e)
             return
         self.driver.clean_buffers(len(self.driver.buffer_coords))
-        
+
         self.generate_picture(cities=False)
         self.add_to_terminal("Shapefile loaded")
-  
+
     def add_to_terminal(self, text):
         '''
         Adds text to the terminal label
@@ -194,7 +202,7 @@ class Gui:
             print(flyable)
             flyable_x = [coord[0] for coord in flyable]
             flyable_y = [coord[1] for coord in flyable]
-            plt.plot(flyable_x, flyable_y, 'b-', label='Flyable Area')
+            plt.plot(flyable_x, flyable_y, 'cyan', label='Flyable Area')
         if area:
             for ind,point in enumerate(self.driver.area_coords):
                 area_x = [coord[0] for coord in point]
@@ -241,7 +249,7 @@ class Gui:
                          transect_path_y, 
                          'purple', 
                          label='Transect Path')
-        
+
         output_path = self.config.config['io']['output_folder']
         graph_name = self.config.config['io']['graph_picture_name']
         if not os.path.exists(output_path):
@@ -310,9 +318,7 @@ class Gui:
             return
         possible_standing_locations= len(self.driver.standing_locations)
         next_standing_id = (self.driver.current_standing_id+1) % possible_standing_locations
-        # next_standing_id = current_standing_id+1
         self.driver.current_standing_id = next_standing_id
-        # self.driver.current_standing_id = (self.driver.current_standing_id + 1) % len(self.driver.standing_locations)
         self.generate_picture(cities = False)
 
     def generate_points(self):
@@ -357,7 +363,8 @@ class Gui:
         try:
             self.check_necessities('generate_transects')
 
-            best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) if x not in self.driver.best_path_coords[:i]]
+            best_path_coords_no_duplicates = [x for i, x in enumerate(self.driver.best_path_coords) 
+                                              if x not in self.driver.best_path_coords[:i]]
             self.driver.best_path_coords = best_path_coords_no_duplicates
             self.driver.create_transects()
             self.add_to_terminal("Transects generated")
@@ -399,6 +406,9 @@ class Gui:
                               clusters=True)
 
     def create_clusters(self):
+        '''
+        Forms clusters for the cities based on the method selected in config
+        '''
         self.check_necessities('create_clusters')
         self.driver.cluster_points()
         self.generate_picture(cities = False,
@@ -422,12 +432,14 @@ class Gui:
             output_path = self.config.config['io']['output_folder']
             img = Image.open(f"{output_path}/{image_path}")
             img = img.resize((400, 400))
-            img_tk = ImageTk.PhotoImage(img)
-            label_img = ttk.Label(self.frm, image=img_tk)
+            self.img_tk = ImageTk.PhotoImage(img)
+            label_img = ttk.Label(self.frm, image=self.img_tk)
             label_img.grid(column=2, row=0, rowspan=13)
-            label_img.image = img_tk  
+            # label_img.image = self.img_tk  
         except Exception as e:
             print("Error loading image:", e)
+            print('continuing without loading image, likely due to first installation')
+            self.add_to_terminal(f"Error loading image, continuing without image,{e}")
 
     def view_threed(self):
         '''
@@ -560,6 +572,7 @@ class Gui:
 
         ttk.Label(self.frm, text="Please Select the folder which contains .shp and .tif files:").grid(column=0, row=0)
         self.terminal.grid(column=0, row=1, rowspan=4)
+        ttk.Button(self.frm, text='Help',command = self.get_help).grid(column=0, row=8)
         ttk.Button(self.frm, text="Browse", command=self.select_folder).grid(column=1, row=0)
 
         ttk.Button(self.frm, text="Generate Buffer", command=self.load_shapefile).grid(column=1, row=1)

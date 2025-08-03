@@ -5,7 +5,7 @@ import os
 import numpy as np
 import open3d as o3d
 import rasterio
-
+import tracemalloc
 import matplotlib
 matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 
@@ -434,6 +434,13 @@ class PointCloud:
 
 
 if __name__ == "__main__":
-    point_cloud = PointCloud('example data/hodhill')
+    config = Config()
+    tracemalloc.start()
+    print('Memory tracking started')
+    config.update_nested(['current_map','folder_location'], 'example data/hodhill')
+    point_cloud = PointCloud()
     point_cloud.read_tif()
-    point_cloud.show_point_cloud()
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"Current memory usage: {current / 10**6}MB; Peak memory usage: {peak / 10**6}MB")
+    tracemalloc.stop()
+    

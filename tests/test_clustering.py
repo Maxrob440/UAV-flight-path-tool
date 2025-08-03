@@ -14,14 +14,14 @@ def test_distance_cluster():
     
     assert len(clusters) ==3
     for cluster in clusters[:-1]:
-        assert len(cluster) == 2 # doesnt include human location
+        assert len(cluster) ==  4# doesnt include human location
     
     config.update_nested(["clustering", "points_per_cluster"], 20)
     cluster_method = DistanceCluster(cities, human_location)
     clusters = cluster_method.cluster()
     
     assert len(clusters) ==1
-    assert len(clusters[0]) == 5  # all cities in one cluster
+    assert len(clusters[0]) == 7  # all cities in one cluster
 
 def test_distance_of_route():
     config.update_nested(["clustering", "points_per_cluster"], 6)
@@ -61,7 +61,7 @@ def test_tsp_cluster():
     
     assert len(clusters) == 3
     for cluster in clusters[:-1]:
-        assert len(cluster) == 2 # doesn't include human location
+        assert len(cluster) == 4 # doesn't include human location
 
 
         

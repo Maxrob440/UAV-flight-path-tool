@@ -37,6 +37,10 @@ class Converter:
                 convert_from = "EPSG:2193"
             elif 'EPSG:27700' in self.crs_info.to_string():
                 convert_from = "EPSG:27700"
+            elif 'EPSG:4326' in self.crs_info.to_string():
+                convert_from = 'EPSG:4326'
+            else:
+                raise RuntimeError(f'tif file does not have a precoded CRS given {self.crs_info.to_string()}')
                 
         inital_z = coords[0][0][2]-20
         for (x,y,z),plot in coords:

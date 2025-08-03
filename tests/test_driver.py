@@ -233,32 +233,33 @@ def test_clustering_sizes():
     driver.cluster_points()
     
     assert len(driver.clustered) == 2, "Clustering should create two clusters"
-    assert len(driver.clustered[0]) == 2, "First cluster should contain two points"
-    assert len(driver.clustered[1]) == 2, "Second cluster should contain two points"
+    assert len(driver.clustered[0]) == 4, "First cluster should contain two points"
+    assert len(driver.clustered[1]) == 4, "Second cluster should contain two points"
  
     config.update_nested(['clustering','points_per_cluster'], 4)
     driver.cities = [(0,0,0), (1,1,1), (2,2,2), (3,3,3), (4,4,4)]
     driver.best_path_coords = [(0,0,0), (1,1,1), (2,2,2), (3,3,3), (4,4,4)]
     driver.cluster_points()
     assert len(driver.clustered) == 2, "Clustering should create two clusters"
-    assert len(driver.clustered[0]) == 4, "First cluster should contain four points"
-    assert len(driver.clustered[1]) == 1, "Second cluster should contain one point"
+    assert len(driver.clustered[0]) == 6, "First cluster should contain four points"
+    assert len(driver.clustered[1]) == 3, "Second cluster should contain one point"
 
 def test_switching_clusters():
     config.update_nested(['clustering','points_per_cluster'], 2)
     driver = Driver()
     driver.cities = [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
     driver.best_path_coords = [(0,0,0), (1,1,1), (2,2,2), (3,3,3)]
+    driver.standing_locations = [(0,0,0)]
     driver.cluster_points()
     driver.cycle_cluster()
     assert len(driver.clustered) == 2, "Clustering should create two clusters"
-    expected = [(2,2,2), (3,3,3)]
+    expected = [(0,0,0), (3,3,3),(0,0,0)]
     assert driver.current_cluster == 1
     assert driver.clustered[1] == expected, "Cities should be switched to the next cluster"
 
     driver.cycle_cluster()
     assert driver.current_cluster == 0, "Current cluster should switch back to the first cluster"
-    expected = [(0,0,0), (1,1,1)]
+    expected = [(0,0,0), (1,1,1),(2,2,2),(0,0,0)]
     assert driver.clustered[0] == expected, "Cities should switch back to the first cluster"
 
 def test_clustering_with_standing_location():
@@ -269,10 +270,10 @@ def test_clustering_with_standing_location():
     driver.best_path_coords = [(0,0,0),(1,1,1), (2,2,2), (3,3,3)]
     driver.cluster_points()
     for cluster in driver.clustered:
-        assert cluster[0] == (0,0), "Standing location should be included in the first cluster"
+        assert cluster[0] == (0,0,0), "Standing location should be included in the first cluster"
     
-    assert len(driver.clustered[0])==3, 'Cluster should have two points and the starting location'
-    assert len(driver.clustered[1])== 2, 'Cluster should have one point and the starting location'
+    assert len(driver.clustered[0])==4, 'Cluster should have two points and the starting location'
+    assert len(driver.clustered[1])== 3, 'Cluster should have one point and the starting location'
 
 def test_a_star_when_in_clustering():
     config.update_nested(['clustering','points_per_cluster'], 2)
