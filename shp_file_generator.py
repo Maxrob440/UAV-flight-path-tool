@@ -29,8 +29,9 @@ class ShapefileGenerator:
 
 class TransectGenerator(ShapefileGenerator):
 
-    def __init__(self,flight_no):
+    def __init__(self,flight_no,crs):
         super().__init__(flight_no)
+        self.crs = crs
     def add_transect(self, transect):
         """
         Add a transect to the list of transects to be saved.
@@ -42,10 +43,10 @@ class TransectGenerator(ShapefileGenerator):
 
         buffered_geometries = []
         for tlinestring in self.to_add:
-            gdf_line = gpd.GeoDataFrame(geometry=[tlinestring], crs="EPSG:27700")
+            gdf_line = gpd.GeoDataFrame(geometry=[tlinestring], crs=self.crs)
             buffered_line = gdf_line.geometry.buffer(1) # Magic number for buffer, adjust as needed
             buffered_geometries.append(buffered_line.iloc[0])
-        gdf_buffered = gpd.GeoDataFrame(geometry=buffered_geometries, crs="EPSG:27700")
+        gdf_buffered = gpd.GeoDataFrame(geometry=buffered_geometries, crs=self.crs)
         
         
         output_folder = self.config.config['io']['output_folder']

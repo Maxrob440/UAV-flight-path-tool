@@ -25,22 +25,38 @@ class Converter:
         '''Shows the CRS information'''
         print('Showing CRS information')
         print(self.tif_file)
-        with rasterio.open(self.tif_file) as src:
-            print(src.crs)
-            self.crs_info = src.crs
+        try:
+            with rasterio.open(self.tif_file) as src:
+                print(src.crs)
+                self.crs_info = src.crs
+        except Exception as e:
+            print(f"Error reading CRS from {self.tif_file}: {e}")
+            print("Using default CRS: EPSG:2193")
+            self.crs_info = 'NZGD2000'  # Default to NZGD2000 if reading fails
+        return self.crs_info
     
-    def convert_mercader_to_lat_long(self,coords,convert_from=None):
-        '''Converts from the mercader (EPSG:2193) to lat long (EPSG:4326)'''
+    def get_crs(self,convert_from):
         self.show_crs()
+        crs = self.crs_info
+        if isinstance(crs, str):
+            pass
+        else:
+            crs = crs.to_string()
+            
         if convert_from is None:
-            if 'NZGD2000' in self.crs_info.to_string():
+            if 'NZGD2000' in crs:
                 convert_from = "EPSG:2193"
-            elif 'EPSG:27700' in self.crs_info.to_string():
+            elif 'EPSG:27700' in crs: 
                 convert_from = "EPSG:27700"
-            elif 'EPSG:4326' in self.crs_info.to_string():
+            elif 'EPSG:4326' in crs:
                 convert_from = 'EPSG:4326'
             else:
                 raise RuntimeError(f'tif file does not have a precoded CRS given {self.crs_info.to_string()}')
+        return convert_from
+    
+    def convert_mercader_to_lat_long(self,coords,convert_from=None):
+        '''Converts from the mercader (EPSG:2193) to lat long (EPSG:4326)'''
+        convert_from = self.get_crs(convert_from)
                 
         inital_z = coords[0][0][2]-20
         for (x,y,z),plot in coords:
@@ -111,7 +127,8 @@ class Converter:
         df.to_csv(csv_path, index=False)
 
     def save_transects(self,transects,flight_no,current_cluster):
-        trans_generator = TransectGenerator(flight_no)
+        crs = self.get_crs(None)
+        trans_generator = TransectGenerator(flight_no,crs)
         for transect in transects[current_cluster].values():
             if len(transect) == 1:
                 continue

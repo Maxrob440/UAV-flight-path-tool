@@ -536,10 +536,14 @@ class AntColony(Pathfinder):
                  human_location:XYZCoordinate, 
                  step:float,
                  current_buffer:int,
-                 n_ants=100, n_iterations=500, alpha=1.0, beta=2.0, evaporation=0.5, q=200, distances=None):
+                 n_ants=100, n_iterations=500, alpha=1.0, beta=2.0, evaporation=0.5, q=200, distances=None,):
         super().__init__(cities, obstacles, pointcloud, human_location,step,current_buffer,distances)
-        self.n_ants = n_ants
-        self.n_iterations = n_iterations
+        self.config = Config()
+        accuracy = int(self.config.get_nested('ant_colony','accuracy'))
+        min_ants,max_ants = 10, 500
+        min_iterations, max_iterations = 10, 1000
+        self.n_ants = int(np.clip(n_ants, min_ants, max_ants) * (accuracy / 5))
+        self.n_iterations = int(np.clip(n_iterations, min_iterations, max_iterations) * (accuracy / 5))
         self.alpha = alpha
         self.beta = beta
         self.evaporation = evaporation
@@ -547,6 +551,7 @@ class AntColony(Pathfinder):
         self.pheromones = {
             frozenset((a, b)): 1 for a in cities for b in cities if a != b
             }
+        
 
 
     def probability(self, current, unvisited):

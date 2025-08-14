@@ -31,10 +31,10 @@ class ClusteringMethod:
 class DistanceCluster(ClusteringMethod):
 
     def cluster(self):
-        if self.human_location in self.cities:
-            self.cities.remove(self.human_location)
+        human_location = self.human_location[:2]
+        if human_location in self.cities:
+            self.cities.remove(human_location)
         cluster_size = int(self.config.get_nested("clustering", "points_per_cluster"))
-        human_location = self.human_location
         distances = {}
         for city in self.cities:
             distance = math.dist(city,human_location)

@@ -11,7 +11,7 @@ from collections import defaultdict
 from clustering import DistanceCluster,TspCluster
 from Config import Config
 from point_cloud import PointCloud
-from pathfinding import Pathfinder,AntColony,BruteForce,Christofides,BnB
+from pathfinding import Pathfinder,AntColony,BruteForce,Christofides,BnB,HeldKarp
 import matplotlib.pyplot as plt
 from shp_file_generator import TransectGenerator
 from transect_solver import BruteTransectSolver,RandomTransectSolver
@@ -517,7 +517,7 @@ class Driver:
         if self.grid_distances is not None:
             distances = self.grid_distances
         if len(self.cities) <=cutoff:
-            pathfinder = BruteForce(self.cities,boundary,self.pointcloudholder,standing_location,a_star_step,boundary_no,distances)
+            pathfinder = HeldKarp(self.cities,boundary,self.pointcloudholder,standing_location,a_star_step,boundary_no,distances)
         else:
             pathfinder = AntColony(self.cities,boundary,self.pointcloudholder,standing_location,a_star_step,boundary_no,distances =distances)
             distances = pathfinder.distances
@@ -569,7 +569,7 @@ class Driver:
                                             human_location=human_location)
                 self.clustered = clusterer.cluster()
                 for ind,cluster in enumerate(self.clustered):
-                    pathfinder = BruteForce(cluster,self.buffer_coords,self.pointcloudholder, human_location,a_star_step,self.current_buffer)
+                    pathfinder =HeldKarp(cluster,self.buffer_coords,self.pointcloudholder, human_location,a_star_step,self.current_buffer)
                     path_distance = pathfinder.solve()
                     path, distance = path_distance
                     self.clustered[ind] = path

@@ -109,8 +109,11 @@ class Gui:
         The selected folder is stored in the config file.
         '''
         self.check_necessities('select_folder')
+        path = askdirectory()
+        print(path)
         self.config.update_nested(['current_map','folder_location'],
-                                  askdirectory(initialdir="/Users/maxrobertson/Documents/"))
+                                  path)
+        
         self.add_to_terminal("Folder selected")
 
         # self.config.save_config()
@@ -529,36 +532,42 @@ class Gui:
             counter+=1
 
             ttk.Label(config_window, text=key,font=bold_font).grid(column=column, row=counter)
-
-            for key2, value2 in value.items():
-                if isinstance(value2,dict):
-                    print(value2)
-                    if value2['type'] == 'hidden':
-                        continue
-                    if value2['type'] == 'checkbutton':
-                        if self.config.get_nested(key,key2) is False:
-                            val = False
+            try:
+                
+                for key2, value2 in value.items():
+                    if isinstance(value2,dict):
+                        print(value2)
+                        if value2['type'] == 'hidden':
+                            continue
+                        if value2['type'] == 'checkbutton':
+                            if self.config.get_nested(key,key2) is False:
+                                val = False
+                            else:
+                                val = True
+                            self.default_values_tk[key2] = tk.BooleanVar(value = val)
                         else:
-                            val = True
-                        self.default_values_tk[key2] = tk.BooleanVar(value = val)
-                    else:
-                        self.default_values_tk[key2] = tk.StringVar(value = self.config.get_nested(key,key2))
+                            self.default_values_tk[key2] = tk.StringVar(value = self.config.get_nested(key,key2))
 
-                    entry_type= value2.get('type', 'entry')
-                    default_value = value2.get('default_value', '')
-                    min_value = value2.get('min_value', None)
-                    max_value = value2.get('max_value', None)
-                    posssible_values = value2.get('values',None)
-                    widget_factory.create_widget(entry_type,{'from': min_value,
-                                                            'to': max_value,
-                                                            'orient': 'horizontal',
-                                                            'variable' :self.default_values_tk[key2],
-                                                            'values':posssible_values}).grid(column=column+1, row=counter+1,sticky='w')
-                elif isinstance(value2,(int,str,float)):
-                    self.default_values_tk[key2] = tk.StringVar(value = self.config.config[key][key2])
-                    ttk.Entry(config_window, textvariable=self.default_values_tk[key2]).grid(column=column+1, row=counter+1,sticky='w')
-                ttk.Label(config_window, text=f"{key2}:").grid(column=column, row=counter+1)
-                counter+=1
+                        entry_type= value2.get('type', 'entry')
+                        default_value = value2.get('default_value', '')
+                        min_value = value2.get('min_value', None)
+                        max_value = value2.get('max_value', None)
+                        posssible_values = value2.get('values',None)
+                        widget_factory.create_widget(entry_type,{'from': min_value,
+                                                                'to': max_value,
+                                                                'orient': 'horizontal',
+                                                                'variable' :self.default_values_tk[key2],
+                                                                'values':posssible_values}).grid(column=column+1, row=counter+1,sticky='w')
+                    elif isinstance(value2,(int,str,float)):
+                        self.default_values_tk[key2] = tk.StringVar(value = self.config.config[key][key2])
+                        ttk.Entry(config_window, textvariable=self.default_values_tk[key2]).grid(column=column+1, row=counter+1,sticky='w')
+                    ttk.Label(config_window, text=f"{key2}:").grid(column=column, row=counter+1)
+                    counter+=1
+            except Exception as e:
+                print(f"Error creating config window for {key}: {e}")
+                self.config.set_default()
+                config_window.destroy()
+                self.create_config_window()
         ttk.Button(config_window, text="Save", command=lambda: save_config(config_window)).grid(column=column, row=counter+2)
         ttk.Button(config_window, text="Reset to Defaults", command=reset_config).grid(column=column+1, row=counter+2)
 
@@ -570,7 +579,7 @@ class Gui:
         # style.theme_use('default')
 
 
-        ttk.Label(self.frm, text="Please Select the folder which contains .shp and .tif files:").grid(column=0, row=0)
+        ttk.Label(self.frm, text="Created by Max Robertson").grid(column=0, row=0)
         self.terminal.grid(column=0, row=1, rowspan=4)
         ttk.Button(self.frm, text='Help',command = self.get_help).grid(column=0, row=8)
         ttk.Button(self.frm, text="Browse", command=self.select_folder).grid(column=1, row=0)
@@ -590,6 +599,7 @@ class Gui:
         ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=12)
 
         self.update_image()
+        self.root.title("UAV Flight Path Planner")
         self.root.mainloop()
 
 if __name__ == "__main__":

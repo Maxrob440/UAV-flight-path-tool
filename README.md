@@ -12,6 +12,15 @@ Each folder must contain:
 - .shp file showing the areas to be assessed
 - An optional but reccomended .txt file that contains mercader coordinates(x,y or x,y,z) of the available standing locations (allow DVLOS), examples in standing locations
 
+
+## Installation
+
+git clone https://github.com/Maxrob440/UAV-flight-path-tool
+cd 
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+
 ## Runtime
 
 1. Run GUI.py

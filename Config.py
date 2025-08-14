@@ -107,7 +107,7 @@ class Config:
             },
 
             "current_map":{
-                "folder_location":  "/Users/maxrobertson/Documents/GitHub/UAV_flight_path/Data/MGAT_01201/Base_Data",
+                "folder_location":  'No folder selected',
                 "human_location":""
             },
             "speed_related":{
@@ -132,7 +132,7 @@ class Config:
                 },
                 "brute_force_cutoff":{
                     "type":"hidden",
-                    "default_value":8
+                    "default_value":17
                 },
                 "maximum_recusive_depth": {
                     'type':'hidden',
@@ -158,6 +158,12 @@ class Config:
                     'default_value':False}
             },
             "ant_colony":{
+                'accuracy':{
+                    'type':'scale',
+                    'default_value':3,
+                    'min_value':1,
+                    'max_value':5
+                },
                 "number_of_ants": {
                     'type':'hidden',
                     'default_value':10
