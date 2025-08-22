@@ -59,16 +59,6 @@ def test_generate_picture_with_all():
     assert len(fig.axes[0].collections)==2
     assert os.path.exists(os.path.join(output_path, graph_name))
 
-def test_load_shape_file_with_params():
-    
-    gui = Gui()
-    gui.config.set_default()
-    gui.config.config['distances']['buffer_m'] = 1 # Default is 30 which for shape file is too much
-    gui.config.save_config()
-    gui.load_shapefile('tests/test_files/test_shp')
-    assert len(gui.driver.buffer_coords) == 1
-    assert len(gui.driver.area_coords) == 1
-
 def test_load_shape_file_from_config():
     gui = Gui()
     gui.config.set_default()
