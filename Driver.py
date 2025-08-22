@@ -63,7 +63,7 @@ class Driver:
         
         folder_path = self.config.get_nested('current_map','folder_location')
         try:
-            possible_files = [file for file in os.listdir(folder_path) if file.endswith('.shp')]
+            possible_files = [file for file in os.listdir(folder_path) if file.endswith('.shp') and "standing" not in file]
         except FileNotFoundError as e:
             raise FileNotFoundError(f"No such file or directory: '{folder_path}'")
         
