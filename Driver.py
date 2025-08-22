@@ -143,7 +143,7 @@ class Driver:
         print('Area and buffer coordinates loaded.')
         return area_coords
     
-    def load_standing_locations(self,standing_locations=None)->Coordinates:
+    def load_standing_locations(self,standing_locations=None,path = None)->Coordinates:
         '''
         Opens the first .txt file in the folder and loads the standing locations.\n
         The file should contain coordinates in the format x,y,z or x,y.\n
@@ -152,41 +152,60 @@ class Driver:
         if standing_locations is not None:
             self.standing_locations = standing_locations
             return
-
         human_height = float(self.config.get_nested('distances','human_height_above_ground_m'))
-        folder_path = self.config.get_nested('current_map','folder_location')
-        # human_height = float(self.config.config['distances']['human_height_above_ground_m'])
+        if path is None:
+            human_height = float(self.config.get_nested('distances','human_height_above_ground_m'))
+            folder_path = self.config.get_nested('current_map','folder_location')
+            # human_height = float(self.config.config['distances']['human_height_above_ground_m'])
 
-        possible_files = [file for file in os.listdir(folder_path) if file.endswith('.txt')]
-        if len(possible_files) != 1:
-            print('No standing locations file found.')
-            print('Random will be generated')
-            return
-        file = os.path.join(folder_path, possible_files[0])
-
+            possible_files = [file for file in os.listdir(folder_path) if file.endswith('.txt')]
+            if len(possible_files) != 1:
+                print('No standing locations file found.')
+                print('Random will be generated')
+                return
+            file = os.path.join(folder_path, possible_files[0])
+        else:
+            file = path
         # file=os.path.join(self.folder_path, 'standing_locations.txt')
         if not os.path.exists(file):
             raise ValueError("Standing locations file not found.")
         
-        with open(file, 'r') as f:
-            lines = f.readlines()
+        if file.endswith('.shp'):
+            gdf = gpd.read_file(file)
+            # human_height = float(self.config.config['distances']['human_height_above_ground_m'])
 
-        for line in lines:
-            coords = line.strip().split(',')
+            for geom in gdf['geometry']:
+                if geom and not geom.is_empty:
+                    if geom.geom_type == 'Point':
+                        x, y = geom.x, geom.y
+                        z = self.pointcloudholder.find_altitude((x, y),human_height)
+                        self.standing_locations.append((x, y, z))
+                    elif geom.geom_type == 'MultiPoint':
+                        for point in geom.geoms:
+                            x, y = point.x, point.y
+                            z = self.pointcloudholder.find_altitude((x, y),human_height)
+                            self.standing_locations.append((x, y, z))
+        elif file.endswith('.txt'):
+            
+            with open(file, 'r') as f:
+                lines = f.readlines()
 
-            if len(coords) == 3:
-                try:
-                    x, y, z = float(coords[0]), float(coords[1]),float(coords[2])
-                    self.standing_locations.append((x, y, z))
+            for line in lines:
+                coords = line.strip().split(',')
 
-                except ValueError:
-                    print(f"Invalid coordinates: {coords}")
-            if len(coords) == 2:
-                try:
-                    x, y = float(coords[0]), float(coords[1])
-                    self.standing_locations.append((x, y,self.pointcloudholder.find_altitude((x,y),human_height)))
-                except ValueError:
-                    print(f"Invalid coordinates: {coords}")
+                if len(coords) == 3:
+                    try:
+                        x, y, z = float(coords[0]), float(coords[1]),float(coords[2])
+                        self.standing_locations.append((x, y, z))
+
+                    except ValueError:
+                        print(f"Invalid coordinates: {coords}")
+                if len(coords) == 2:
+                    try:
+                        x, y = float(coords[0]), float(coords[1])
+                        self.standing_locations.append((x, y,self.pointcloudholder.find_altitude((x,y),human_height)))
+                    except ValueError:
+                        print(f"Invalid coordinates: {coords}")
 
 
     

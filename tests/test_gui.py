@@ -200,43 +200,7 @@ def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_
     gui.generate_transects()
     assert gui.terminal['text'] == 'Transects generated' or 'Error loading image,' in gui.terminal['text'] # I was defeated with this
 
-def test_loading_standing_locations():
-    gui = Gui()
-    gui.config.set_default()
-    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test'
-    gui.config.config['distances']['voxel_size_m'] = 0.1
-    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
-    gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
-    gui.config.save_config()
 
-    gui.load_shapefile()
-    gui.generate_points()
-    
-    assert gui.driver.standing_locations is not None
-    assert len(gui.driver.standing_locations) == 1
-    assert gui.driver.standing_locations[0][0:2] == (50,50)
-
-def test_route_generation_after_moving_standing_location():
-    gui = Gui()
-    gui.config.set_default()
-    gui.config.config['current_map']['folder_location'] = 'tests/test_files/complete_test_with_multiple_standing_locations'
-    gui.config.config['distances']['buffer_m'] = 5 # Default is 30 which for shape file is too much
-    gui.config.config['distances']['distance_to_nearest_point_m'] = 0.1
-    gui.config.config['hexagonal_grid_generation']['grid_size_m'] = 20
-    
-    gui.config.save_config()
-
-    gui.load_shapefile()
-    gui.generate_points()
-    gui.solve_tsp()
-
-    gui.load_next_standing_location()
-    gui.generate_points()
-    gui.solve_tsp()
-
-    current_location = gui.driver.standing_locations[gui.driver.current_standing_id]
-
-    assert current_location[:2] in gui.driver.best_path_coords
 
 def test_route_generation_standing_outside_area():
     gui = Gui()

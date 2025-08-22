@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter import ttk
-from tkinter.filedialog import askdirectory
+from tkinter.filedialog import askdirectory, askopenfilename
 from tkinter import font
 import os
 import tkinter as tk
@@ -146,8 +146,23 @@ class Gui:
         self.driver.clean_buffers(len(self.driver.buffer_coords))
         self.driver.pointcloudholder.read_tif()
         self.add_to_terminal("Point cloud loaded")
+       
+        self.generate_picture(cities=False)
+        self.add_to_terminal("Shapefile loaded")
+    
+    def load_standing_locations(self):
+        path = askopenfilename(
+        title="Select a file",
+        # initialdir="~",                        # or Path.home()
+        filetypes=[("Text files", "*.txt"),
+                   ("Shapefiles", "*.shp"),
+                   ("All files", "*.*"),
+                   ],
+    )
+
+        
         try:
-            self.driver.load_standing_locations()
+            self.driver.load_standing_locations(path=path)
             self.config.config['current_map']['human_location'] = self.driver.standing_locations
             self.config.save_config()
             
@@ -157,8 +172,7 @@ class Gui:
             xystart=None
             self.add_to_terminal("Error loading standing locations, ensure a .txt file is present")
         self.generate_picture(cities=False)
-        self.add_to_terminal("Shapefile loaded")
-
+        self.add_to_terminal("Standing locations loaded")
     def add_to_terminal(self, text):
         '''
         Adds text to the terminal label
@@ -236,7 +250,7 @@ class Gui:
         if standing_location and self.driver.standing_locations:
             standing_x= [self.driver.standing_locations[self.driver.current_standing_id][0]]
             standing_y=[self.driver.standing_locations[self.driver.current_standing_id][1]]
-            plt.scatter(standing_x,standing_y, color = 'blue',label='Human Location')
+            plt.scatter(standing_x,standing_y, marker = 'x',color = 'blue',label='Human Location')
 
         if transects:
             for _,transect in self.driver.transects[self.driver.current_cluster].items():
@@ -582,23 +596,25 @@ class Gui:
 
 
         ttk.Label(self.frm, text="Created by Max Robertson").grid(column=0, row=0)
-        self.terminal.grid(column=0, row=1, rowspan=4)
+        ttk.Label(self.frm,text="To begin please select the folder that contains the boundary.shp and DTM.tif files").grid(column=0, row=1)
+       
+        self.terminal.grid(column=0, row=3, rowspan=4)
         ttk.Button(self.frm, text='Help',command = self.get_help).grid(column=0, row=8)
         ttk.Button(self.frm, text="Browse", command=self.select_folder).grid(column=1, row=0)
 
         ttk.Button(self.frm, text="Generate Buffer", command=self.load_shapefile).grid(column=1, row=1)
         ttk.Button(self.frm,text="Cycle Buffer",command=self.load_next_buffer).grid(column=1, row=2)
-        ttk.Button(self.frm,text="Generate points",command=self.generate_points).grid(column=1, row=3)
+        ttk.Button(self.frm,text="Select Standing Locations",command=self.load_standing_locations).grid(column=1, row=3)
         ttk.Button(self.frm,text="Cycle Standing Location",command=self.load_next_standing_location).grid(column=1, row=4)
-        ttk.Button(self.frm,text="Solve TSP",command=self.solve_tsp).grid(column=1, row=5)
-        ttk.Button(self.frm,text="Form Clusters",command = self.create_clusters).grid(column=1,row=6)
-        ttk.Button(self.frm,text="Cycle Cluster",command = self.cycle_cluster).grid(column=1,row=7)
-        ttk.Button(self.frm,text="Generate Transects",command=self.generate_transects).grid(column=1, row=8)
-        ttk.Button(self.frm,text="Solve Transects",command=self.solve_transects).grid(column=1, row=9)
-        ttk.Button(self.frm,text="View 3D",command=self.view_threed).grid(column=1, row=10)
+        ttk.Button(self.frm,text="Generate points",command=self.generate_points).grid(column=1, row=5)
+        ttk.Button(self.frm,text="Solve TSP",command=self.solve_tsp).grid(column=1, row=6)
+        ttk.Button(self.frm,text="Form Clusters",command = self.create_clusters).grid(column=1,row=7)
+        ttk.Button(self.frm,text="Cycle Cluster",command = self.cycle_cluster).grid(column=1,row=8)
+        ttk.Button(self.frm,text="Generate Transects",command=self.generate_transects).grid(column=1, row=9)
+        ttk.Button(self.frm,text="Solve Transects",command=self.solve_transects).grid(column=1, row=10)
+        ttk.Button(self.frm,text="View 3D",command=self.view_threed).grid(column=1, row=11)
         ttk.Button(self.frm, text="adjust config", command=self.create_config_window).grid(column=0, row=11)
-
-        ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=12)
+        ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=13)
 
         self.update_image()
         self.root.title("UAV Flight Path Planner")
