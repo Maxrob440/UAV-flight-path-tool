@@ -54,3 +54,7 @@ Defaults are provided that will effectively work in most circumstances
 - Ant colony config not implemented
 - No valid input checks for the config page
 - Default config still to be tuned
+
+## Acknowledgements
+I would like to express my gratitude to my supervisor, Dr Milto Miltiadou, for her invaluable guidance, support, and constructive feedback throughout the course of this project.
+I am also grateful to Sam West, Susana Gonzalez and Jack Guo from Interpine Innovation for their collaboration and practical insights, which provided valuable context and relevance to the project. Their input helped bridge the gap between academic research and real-world forestry applications.
