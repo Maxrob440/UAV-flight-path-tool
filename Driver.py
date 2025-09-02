@@ -404,6 +404,8 @@ class Driver:
         self.cities = cities
         return cities
     
+
+    
     def create_transects(self):
         transect_length = float(self.config.get_nested('distances','transect_length_m'))
         # transect_length = float(self.config.config['distances']['transect_length_m'])
@@ -424,6 +426,10 @@ class Driver:
             if point == ordered_points[0]:
                 transects[current_cluster][point] = [point]
                 continue
+            if self.standing_locations:
+                if point[:2] == self.standing_locations[self.current_standing_id][:2]:
+                    transects[current_cluster][point] = [point]
+                    continue
             while True:
                 transect = []
                 random_angle = np.random.uniform(0,2*np.pi)
