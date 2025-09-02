@@ -424,6 +424,9 @@ class Driver:
             if point == ordered_points[0]:
                 transects[current_cluster][point] = [point]
                 continue
+            if point[:2] == self.standing_locations[self.current_standing_id][:2]:
+                transects[current_cluster][point] = [point]
+                continue
             while True:
                 transect = []
                 random_angle = np.random.uniform(0,2*np.pi)
