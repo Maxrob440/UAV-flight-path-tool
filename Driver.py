@@ -332,7 +332,54 @@ class Driver:
         self.cities = points
         return points
 
+    def load_points(self,path):
+        '''
+        Loads points from a given path.\n
+        The file should contain coordinates in the format x,y,z or x,y.\n
+        If z is not provided, the altitude is calculated using the pointcloudholder.\n
+        '''
+        self.cities = []
+        self.grid_distances = None
+        if not os.path.exists(path):
+            raise ValueError("Points file not found.")
+        
+        human_height = float(self.config.get_nested('distances','human_height_above_ground_m'))
+        # human_height = float(self.config.config['distances']['human_height_above_ground_m'])
 
+        if path.endswith('.shp'):
+            gdf = gpd.read_file(path)
+            for geom in gdf['geometry']:
+                if geom and not geom.is_empty:
+                    if geom.geom_type == 'Point':
+                        x, y = geom.x, geom.y
+                        self.cities.append((x,y))
+                    elif geom.geom_type == 'MultiPoint':
+                        for point in geom.geoms:
+                            x, y = point.x, point.y
+                            self.cities.append((x, y))
+        elif path.endswith('.txt'):
+            
+            with open(path, 'r') as f:
+                lines = f.readlines()
+
+            for line in lines:
+                coords = line.strip().split(',')
+
+                if len(coords) == 3:
+                    try:
+                        x, y, z = float(coords[0]), float(coords[1]),float(coords[2])
+                        self.cities.append((x, y))
+
+                    except ValueError:
+                        print(f"Invalid coordinates: {coords}")
+                if len(coords) == 2:
+                    try:
+                        x, y = float(coords[0]), float(coords[1])
+                        self.cities.append((x, y))
+                    except ValueError:
+                        print(f"Invalid coordinates: {coords}")
+        print('Points loaded.')
+        self.cities.append(self.standing_locations[self.current_standing_id][:2])
 
     def generate_points_random(self,starting_point:Coordinate=None,points=None)->Coordinates:
         '''

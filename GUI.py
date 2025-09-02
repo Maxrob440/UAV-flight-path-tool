@@ -349,6 +349,21 @@ class Gui:
         self.driver.current_standing_id = next_standing_id
         self.generate_picture(cities = False)
 
+    def load_points(self):
+        self.driver.best_path_coords = []
+        self.driver.pointcloudholder.dvlos_lines=[]
+        self.driver.transect_path = []
+        self.driver.transects = []
+        path = askopenfilename(
+        title="Select a file",
+        filetypes=[("Text files", "*.txt"),
+                   ("Shapefiles", "*.shp"),
+                   ("All files", "*.*"),
+                   ],
+    )
+        self.driver.load_points(path=path)
+        self.add_to_terminal("Points loaded")
+        self.generate_picture(cities=True)
     def generate_points(self):
         '''
         Loads the standing locations and generates points around them with DVLOS\n
@@ -374,6 +389,7 @@ class Gui:
             self.driver.generate_points_standard(xystart)
         self.add_to_terminal("Points generated")
         self.generate_picture(cities=True)
+  
 
     def generate_transects(self):
         '''
@@ -598,7 +614,7 @@ class Gui:
         ttk.Label(self.frm, text="Created by Max Robertson").grid(column=0, row=0)
         ttk.Label(self.frm,text="To begin please select the folder that contains the boundary.shp and DTM.tif files").grid(column=0, row=1)
        
-        self.terminal.grid(column=0, row=3, rowspan=4)
+        self.terminal.grid(column=0, row=6, rowspan=2)
         ttk.Button(self.frm, text='Help',command = self.get_help).grid(column=0, row=8)
         ttk.Button(self.frm, text="Browse", command=self.select_folder).grid(column=1, row=0)
 
@@ -606,6 +622,7 @@ class Gui:
         ttk.Button(self.frm,text="Cycle Buffer",command=self.load_next_buffer).grid(column=1, row=2)
         ttk.Button(self.frm,text="Select Standing Locations",command=self.load_standing_locations).grid(column=1, row=3)
         ttk.Button(self.frm,text="Cycle Standing Location",command=self.load_next_standing_location).grid(column=1, row=4)
+        ttk.Button(self.frm, text = "Load points", command=self.load_points).grid(column=0,row=5)
         ttk.Button(self.frm,text="Generate points",command=self.generate_points).grid(column=1, row=5)
         ttk.Button(self.frm,text="Solve TSP",command=self.solve_tsp).grid(column=1, row=6)
         ttk.Button(self.frm,text="Form Clusters",command = self.create_clusters).grid(column=1,row=7)
