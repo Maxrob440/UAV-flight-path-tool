@@ -708,9 +708,9 @@ class Gui:
 
         ttk.Button(self.frm, text="Generate Buffer", command=self.load_shapefile).grid(column=1, row=1)
         ttk.Button(self.frm,text="Cycle Buffer",command=self.load_next_buffer).grid(column=1, row=2)
-        ttk.Button(self.frm, text="Select point on map", command=self.select_point_on_map).grid(column=0, row=3)
-        ttk.Button(self.frm,text="Select Standing Locations",command=self.load_standing_locations).grid(column=1, row=3)
-        ttk.Button(self.frm,text="Cycle Standing Location",command=self.load_next_standing_location).grid(column=1, row=4)
+        ttk.Button(self.frm, text="Select Operator location on map", command=self.select_point_on_map).grid(column=0, row=3)
+        ttk.Button(self.frm,text="Select Operator Locations",command=self.load_standing_locations).grid(column=1, row=3)
+        ttk.Button(self.frm,text="Cycle Operator Location",command=self.load_next_standing_location).grid(column=1, row=4)
         ttk.Button(self.frm, text = "Load points", command=self.load_points).grid(column=0,row=5)
         ttk.Button(self.frm,text="Generate points",command=self.generate_points).grid(column=1, row=5)
         ttk.Button(self.frm,text="Solve TSP",command=self.solve_tsp).grid(column=1, row=6)
