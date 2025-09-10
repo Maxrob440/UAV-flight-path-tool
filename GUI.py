@@ -9,14 +9,15 @@ import webbrowser
 from PIL import Image, ImageTk
 import matplotlib
 import matplotlib.pyplot as plt
-
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 from Driver import Driver
 from Config import Config
 from saveoutput import Converter
 from widget_factory import WidgetFactory
 
-matplotlib.use('Agg')  # Use a non-interactive backend for testing
-
+if os.environ.get("MPLBACKEND", "").lower() != "agg":
+    matplotlib.use("TkAgg")
 
 class Gui:
     '''
@@ -603,6 +604,93 @@ class Gui:
         ttk.Button(config_window, text="Save", command=lambda: save_config(config_window)).grid(column=column, row=counter+2)
         ttk.Button(config_window, text="Reset to Defaults", command=reset_config).grid(column=column+1, row=counter+2)
 
+
+    def select_point_on_map(self):
+        """
+        Opens a modal window with an interactive Matplotlib plot of the current map.
+        Clicking on the map drops a point, stores it as a standing location,
+        refreshes the main image, and closes the picker (you can change that behavior).
+        """
+        if not hasattr(self, "driver") or self.driver is None:
+            self.add_to_terminal("101: Driver not loaded")
+            return
+        if not getattr(self.driver, "area_coords", None):
+            self.add_to_terminal("Load shapefile first")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Click to select a point")
+        win.geometry("650x650")
+        win.transient(self.root)
+        win.grab_set()  # modal
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+        canvas = FigureCanvasTkAgg(fig, master=win)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        # Flyable/buffer
+        flyable_flag = self.config.get_nested('point_creation','flyable_areas')
+        try:
+            if flyable_flag and getattr(self.driver, "flyable_area", None):
+                flyable = self.driver.flyable_area[self.driver.current_flyable_area]
+                fx = [c[0] for c in flyable]; fy = [c[1] for c in flyable]
+                ax.plot(fx, fy, linewidth=1, label="Flyable Area")
+            elif getattr(self.driver, "buffer_coords", None):
+                buf = self.driver.buffer_coords[self.driver.current_buffer]
+                bx = [c[0] for c in buf]; by = [c[1] for c in buf]
+                ax.plot(bx, by, linewidth=1, label="Buffer")
+        except Exception:
+            pass
+
+        # Area boundary/polygons
+        for idx, ring in enumerate(self.driver.area_coords):
+            ax.plot([c[0] for c in ring], [c[1] for c in ring], 'g-', linewidth=1, label="Area" if idx == 0 else None)
+
+        if getattr(self.driver, "cities", None):
+            ax.scatter([c[0] for c in self.driver.cities], [c[1] for c in self.driver.cities], s=10, label="Cities")
+
+        if getattr(self.driver, "standing_locations", None) and self.driver.standing_locations:
+            sx, sy = self.driver.standing_locations[self.driver.current_standing_id]
+            ax.scatter([sx], [sy], marker='x', s=60, label="Human Location")
+
+        ax.set_aspect('equal', adjustable='datalim')
+        ax.set_title("Click anywhere to select a point")
+        ax.axis('off')
+        ax.legend(loc="best", fontsize=8)
+        fig.tight_layout()
+        canvas.draw()
+
+        def on_click(event):
+            if event.inaxes is None or event.xdata is None or event.ydata is None:
+                return
+            x, y = float(event.xdata), float(event.ydata)
+
+            ax.plot(x, y, 'rx', markersize=8)
+            canvas.draw()
+
+            if not hasattr(self.driver, "standing_locations") or self.driver.standing_locations is None:
+                self.driver.standing_locations = []
+            height=float(self.config.get_nested('distances','human_height_above_ground_m'))
+            self.driver.standing_locations.append((x, y,self.driver.pointcloudholder.find_altitude((x,y),height)))
+            self.driver.current_standing_id = len(self.driver.standing_locations) - 1
+
+            self.config.config['current_map']['human_location'] = self.driver.standing_locations
+            try:
+                self.config.save_config()
+            except Exception:
+                pass
+
+            self.generate_picture(cities=False)
+            self.add_to_terminal(f"Standing location added: ({x:.3f}, {y:.3f})")
+            win.destroy()
+
+        cid = fig.canvas.mpl_connect("button_press_event", on_click)
+
+        # Optional cancel button
+        btn_frame = ttk.Frame(win)
+        btn_frame.pack(fill=tk.X, padx=8, pady=6)
+        ttk.Button(btn_frame, text="Cancel", command=win.destroy).pack(side=tk.RIGHT)
+
     def run_gui(self):
         '''
         Main function to run the GUI\n
@@ -620,6 +708,7 @@ class Gui:
 
         ttk.Button(self.frm, text="Generate Buffer", command=self.load_shapefile).grid(column=1, row=1)
         ttk.Button(self.frm,text="Cycle Buffer",command=self.load_next_buffer).grid(column=1, row=2)
+        ttk.Button(self.frm, text="Select point on map", command=self.select_point_on_map).grid(column=0, row=3)
         ttk.Button(self.frm,text="Select Standing Locations",command=self.load_standing_locations).grid(column=1, row=3)
         ttk.Button(self.frm,text="Cycle Standing Location",command=self.load_next_standing_location).grid(column=1, row=4)
         ttk.Button(self.frm, text = "Load points", command=self.load_points).grid(column=0,row=5)
@@ -631,6 +720,7 @@ class Gui:
         ttk.Button(self.frm,text="Solve Transects",command=self.solve_transects).grid(column=1, row=10)
         ttk.Button(self.frm,text="View 3D",command=self.view_threed).grid(column=1, row=11)
         ttk.Button(self.frm, text="adjust config", command=self.create_config_window).grid(column=0, row=11)
+
         ttk.Button(self.frm,text="Save output",command=self.save_output).grid(column=1, row=13)
 
         self.update_image()
