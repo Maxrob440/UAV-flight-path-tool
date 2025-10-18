@@ -8,18 +8,23 @@ import matplotlib
 
 matplotlib.use('Agg')  # Use a non-interactive backend for testing
 
+skip_gui = (os.environ.get("DISPLAY", "") == "") or os.environ.get("CI") == "true"
+
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_gui_initialization():
     gui = Gui()
     gui.config.set_default()
     assert gui is not None
     assert gui.config is not None
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_add_to_terminal():
     gui= Gui()
     gui.config.set_default()
     gui.add_to_terminal("Test message")
     assert gui.terminal['text'] == "Test message"
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_generate_picture_none():
     gui = Gui()
     gui.config.set_default()
@@ -34,7 +39,7 @@ def test_generate_picture_none():
 
     assert os.path.exists(os.path.join(output_path, graph_name))
     
-
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_generate_picture_with_all():
     gui = Gui()
     gui.config.set_default()
@@ -58,7 +63,8 @@ def test_generate_picture_with_all():
     assert len(fig.axes[0].lines)==2
     assert len(fig.axes[0].collections)==2
     assert os.path.exists(os.path.join(output_path, graph_name))
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_load_shape_file_from_config():
     gui = Gui()
     gui.config.set_default()
@@ -68,7 +74,8 @@ def test_load_shape_file_from_config():
     gui.load_shapefile()
     assert len(gui.driver.buffer_coords) == 1
     assert len(gui.driver.area_coords) == 1
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_load_shape_file_from_config_no_folder():
     gui = Gui()
     # gui.config.config['current_map']['folder_location'] = ''
@@ -79,6 +86,7 @@ def test_load_shape_file_from_config_no_folder():
 
     assert gui.terminal['text'] == "Invalid folder selected, please try again"
 
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_load_load_shape_file_not_found():
     gui = Gui()
     gui.config.set_default()
@@ -90,6 +98,7 @@ def test_load_load_shape_file_not_found():
 
 
 @patch('open3d.visualization.draw_geometries')
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_integration_correct_orders(mock_draw_geometries):
     gui=Gui()
     gui.config.set_default()
@@ -119,6 +128,7 @@ def test_integration_correct_orders(mock_draw_geometries):
     assert len(gui.driver.transect_path[0][0]) == 2
 
 
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 @patch('open3d.visualization.draw_geometries')
 def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
     gui = Gui()
@@ -135,7 +145,8 @@ def test_view_3d_TSP_path_without_transects(mock_draw_geometries):
     gui.solve_tsp()
     gui.view_threed()
     assert gui.terminal['text'] == '3D view generated'
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_save_output_of_just_TSP_path():
     gui = Gui()
     gui.config.set_default()
@@ -160,6 +171,7 @@ def test_save_output_of_just_TSP_path():
 
     # assert os.path.exists(os.path.join(gui.config.config['io']['output_folder'], 'TSP_path.txt'))
 
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 @patch('open3d.visualization.draw_geometries')
 def test_transect_generation_after_viewing_threed(mock_draw_geometries):
     gui= Gui()
@@ -179,6 +191,7 @@ def test_transect_generation_after_viewing_threed(mock_draw_geometries):
     gui.generate_transects()
     assert gui.terminal['text'] == 'Transects generated' or 'Error loading image,' in gui.terminal['text'] # Defeated by this, runs happily by itself but not as a block
 
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 @patch('open3d.visualization.draw_geometries')
 def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_geometries):
     gui= Gui()
@@ -201,7 +214,7 @@ def test_transect_generation_after_viewing_threed_with_transect_route(mock_draw_
     assert gui.terminal['text'] == 'Transects generated' or 'Error loading image,' in gui.terminal['text'] # I was defeated with this
 
 
-
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_route_generation_standing_outside_area():
     gui = Gui()
     gui.config.set_default()
@@ -219,7 +232,8 @@ def test_route_generation_standing_outside_area():
     gui.solve_tsp()
 
     assert len(gui.driver.best_path_coords) >1
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_double_press_of_tsp():
     gui = Gui()
     gui.config.set_default()
@@ -238,7 +252,8 @@ def test_double_press_of_tsp():
 
 
     assert gui.terminal['text'] == 'TSP solved' or 'Error loading image,' in gui.terminal['text'] #Fails when ran together without this patch
-
+    
+@pytest.mark.skipif(skip_gui, reason="GUI requires a display (headless CI)")
 def test_flyable_area():
     gui = Gui()
     gui.config.set_default()
