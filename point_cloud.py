@@ -7,7 +7,7 @@ import open3d as o3d
 import rasterio
 import tracemalloc
 import matplotlib
-matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
+# matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 
 from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt
