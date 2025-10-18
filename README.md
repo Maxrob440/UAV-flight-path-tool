@@ -1,7 +1,8 @@
 # UAV PROJECT 2.1.1
-
-Work completed in collaboration with Interpine NZ<br/>
-This is an initial draft
+## Overview
+This is a python based tool used for the automation of drone flight planning for forestry and environmental monitoring. The system generates safe and efficient UAV flight paths over large terrain areas by combining geospatial data, to eliminate manual waypoint creation.<br/>
+The software ensures the drone remains at a constant height above the terrain whilst abiding by NZ legislation requiring direct visual line of sight with the operator whilst it visits generated way points and captures data at each.
+Developed in collaboration with Interpine Group Ltd, the tool achieved a 720× reduction in flight-planning time compared to traditional manual methods whilst maintaining or shortening operational distances and has been adopted for weekly operational use in forestry surveys.
 
 ## Requirements
 
@@ -10,16 +11,19 @@ Python 3.12.x is required for this software to run.
 Each folder must contain:
 - .tif file highlighting the area
 - .shp file showing the areas to be assessed
-- An optional but reccomended .txt file that contains mercader coordinates(x,y or x,y,z) of the available standing locations (allow DVLOS), examples in standing locations
 
+Optional extras:
+- a .shp file with a name including 'flyable' highlighting the flyable area around a plot, useful for small disconnected plots
+- a .shp / .txt file containing possible operator positions
+- a .shp file containing pre programmed waypoints to be visited
 
 ## Installation
 
-git clone https://github.com/Maxrob440/UAV-flight-path-tool
-cd 
-python3 -m venv venv
-source ./venv/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/Maxrob440/UAV-flight-path-tool<br/>
+cd UAV-flight-path-tool<br/>
+python3 -m venv venv<br/>
+source ./venv/bin/activate<br/>
+pip install -r requirements.txt<br/>
 
 ## Runtime
 
@@ -46,14 +50,6 @@ Main parts are listed below:
 - human_height_above_ground_m: used to determine DVLOS, do not set bellow DVLOS_m<br>
 
 Defaults are provided that will effectively work in most circumstances
-
-## Limitations
-
-- No flight area implemented
-- The final point in the csv output will always face north
-- Ant colony config not implemented
-- No valid input checks for the config page
-- Default config still to be tuned
 
 ## Acknowledgements
 I would like to express my gratitude to my supervisor, Dr Milto Miltiadou, for her invaluable guidance, support, and constructive feedback throughout the course of this project.
