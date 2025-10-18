@@ -3,7 +3,7 @@ from Driver import Driver
 from Config import Config
 import os
 from unittest.mock import patch
-
+import pytest
 import matplotlib
 
 matplotlib.use('Agg')  # Use a non-interactive backend for testing
