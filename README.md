@@ -4,6 +4,7 @@ This is a python based tool used for the automation of drone flight planning for
 The software ensures the drone remains at a constant height above the terrain whilst abiding by NZ legislation requiring direct visual line of sight with the operator whilst it visits generated way points and captures data at each.
 Developed in collaboration with Interpine Group Ltd, the tool achieved a 720× reduction in flight-planning time compared to traditional manual methods whilst maintaining or shortening operational distances and has been adopted for weekly operational use in forestry surveys.
 
+Output is ready to be imported into FlyLitchi.com, for DJI drones.
 ## Requirements
 
 Python 3.12.x is required for this software to run.
